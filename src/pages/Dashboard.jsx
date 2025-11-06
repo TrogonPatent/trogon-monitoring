@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from './AuthGate';
 
 /**
  * Dashboard Page
  * 
- * Lists all provisional applications and their monitoring status
+ * Landing page for authenticated users
+ * Shows upload button and list of provisionals
+ * Simplified stats: Total Applications & Active Monitoring only
  */
 
 export default function Dashboard() {
   const [applications, setApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { email, handleLogout } = useAuth();
 
   useEffect(() => {
     loadApplications();
@@ -73,50 +77,74 @@ export default function Dashboard() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Trogon Submarine</h1>
-              <p className="text-xs text-gray-500">Patent Monitoring Dashboard</p>
+              <h1 className="text-lg font-bold text-gray-900">Trogon Hunt & Submarine</h1>
+              <p className="text-xs text-gray-500">Patent Monitoring System</p>
             </div>
           </div>
-          <a 
-            href="/provisional/new"
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
-          >
-            + New Provisional
-          </a>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span>{email}</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </nav>
 
       {/* Main content */}
       <div className="max-w-6xl mx-auto p-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-600 mb-1">Total Applications</p>
-            <p className="text-3xl font-bold text-gray-900">{applications.length}</p>
+        {/* Simplified Stats - Only 2 cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span className="text-sm text-gray-600">Total Applications</span>
+            </div>
+            <p className="text-4xl font-bold text-gray-900">{applications.length}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-600 mb-1">Active Monitoring</p>
-            <p className="text-3xl font-bold text-blue-600">
+          
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm text-gray-600">Active Monitoring</span>
+            </div>
+            <p className="text-4xl font-bold text-green-600">
               {applications.filter(a => a.monitoringActive).length}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-600 mb-1">Avg. Score</p>
-            <p className="text-3xl font-bold text-green-600">
-              {applications.filter(a => a.patentabilityScore).length > 0
-                ? Math.round(applications.reduce((sum, a) => sum + (a.patentabilityScore || 0), 0) / applications.filter(a => a.patentabilityScore).length)
-                : '-'}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-sm text-gray-600 mb-1">Total PODs</p>
-            <p className="text-3xl font-bold text-purple-600">
-              {applications.reduce((sum, a) => sum + (a.podCount || 0), 0)}
             </p>
           </div>
         </div>
 
-        {/* Applications List */}
+        {/* Upload Provisional - Prominent */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-xl p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">Upload Provisional Patent</h2>
+              <p className="text-blue-100">Upload specification and drawings to begin monitoring</p>
+            </div>
+            <a 
+              href="/provisional/new"
+              className="bg-white text-blue-600 px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Upload Provisional
+            </a>
+          </div>
+        </div>
+
+        {/* Applications List - Simplified */}
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-xl font-semibold">Your Provisional Applications</h2>
@@ -151,7 +179,7 @@ export default function Dashboard() {
                           {getStatusBadge(app.status)}
                           {app.monitoringActive && (
                             <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                              Monitoring
+                              🔒 Monitoring
                             </span>
                           )}
                         </div>
@@ -178,23 +206,6 @@ export default function Dashboard() {
                             <p className="text-gray-500">Primary CPC</p>
                             <p className="font-medium text-gray-900 font-mono text-xs">{app.primaryCpc}</p>
                           </div>
-                        </div>
-
-                        <div className="flex items-center gap-6 text-sm">
-                          <div className="flex items-center gap-2">
-                            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                            </svg>
-                            <span className="text-gray-600">{app.podCount} PODs</span>
-                          </div>
-                          {app.patentabilityScore && (
-                            <div className="flex items-center gap-2">
-                              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                              </svg>
-                              <span className="text-gray-600">Score: {app.patentabilityScore}/100</span>
-                            </div>
-                          )}
                         </div>
                       </div>
 
@@ -226,18 +237,14 @@ export default function Dashboard() {
         <div className="mt-8">
           <details className="text-sm text-gray-600 bg-white rounded-lg shadow p-4">
             <summary className="cursor-pointer font-medium text-gray-800 mb-2">
-              Development Notes (Remove in production)
+              🔒 System Info (Remove in production)
             </summary>
             <div className="space-y-2 pl-4">
-              <p>✅ UI Complete: Dashboard with application list</p>
-              <p>⏳ TODO: Wire up actual API endpoints:</p>
-              <ul className="list-disc pl-6 space-y-1">
-                <li>GET /api/applications - Fetch all applications</li>
-                <li>GET /api/applications/:id - Fetch single application details</li>
-                <li>POST /api/applications/:id/start-monitoring - Begin Phase B</li>
-              </ul>
+              <p>✅ Access: Restricted to Brad & Laura only</p>
+              <p>✅ UI Complete: Simplified dashboard focused on upload</p>
+              <p>⏳ TODO: Wire up backend API endpoints</p>
               <p>📊 Current State: No mock data - empty dashboard</p>
-              <p>🎯 Next: Build backend API routes</p>
+              <p>🎯 Next: Build backend API routes for provisionals</p>
             </div>
           </details>
         </div>
