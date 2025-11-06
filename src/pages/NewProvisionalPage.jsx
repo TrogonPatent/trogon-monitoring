@@ -19,12 +19,15 @@ export default function NewProvisionalPage() {
               <p className="text-xs text-gray-500">Prior Art Search & Classification Validation</p>
             </div>
           </div>
-          <a 
-            href="/dashboard" 
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
-            ← Back to Dashboard
-          </a>
+          import { Link } from 'react-router-dom';
+
+// Then in the header:
+<Link 
+  to="/" 
+  className="text-sm text-gray-600 hover:text-gray-900"
+>
+  ← Back to Dashboard
+</Link>
         </div>
       </nav>
       {/* Main content */}
