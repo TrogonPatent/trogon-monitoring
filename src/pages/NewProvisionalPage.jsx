@@ -109,98 +109,64 @@ export default function ProvisionalUpload() {
     }
   };
 
-  // Step 2: Call USPTO classifier
+  // Step 2 & 3 Combined: Call Classification API (gets both CPC + PODs)
   const handleClassification = async () => {
     setStep('classification');
 
     try {
-      // TODO: Call USPTO classifier API
-      // const response = await fetch('/api/classify-provisional', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ specText, title })
-      // });
-      // const data = await response.json();
+      // Call our combined classify-provisional API
+      const response = await fetch('/api/classify-provisional', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          specText, 
+          title,
+          applicationId 
+        })
+      });
 
-      // Mock CPC predictions for testing
-      const mockPredictions = [
-        { code: 'G06F 40/169', confidence: 0.92, description: 'Document processing' },
-        { code: 'G06N 3/08', confidence: 0.87, description: 'Neural networks' },
-        { code: 'G06F 16/33', confidence: 0.81, description: 'Query processing' },
-        { code: 'H04L 51/00', confidence: 0.75, description: 'User-to-user messaging' }
-      ];
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Classification failed');
+      }
 
-      setCpcPredictions(mockPredictions);
-      setPrimaryCpc(mockPredictions[0].code);
-      
-      // Determine technology area from primary CPC
-      const area = determineTechnologyArea(mockPredictions[0].code);
-      setTechnologyArea(area);
+      const data = await response.json();
 
-      // Move to POD extraction
-      setTimeout(() => {
-        handlePodExtraction();
-      }, 1500);
+      console.log('Classification API response:', {
+        primaryCpc: data.primaryCpc,
+        podCount: data.pods.length,
+        cpcCount: data.cpcPredictions.length
+      });
 
-    } catch (err) {
-      setError(err.message);
-      setIsProcessing(false);
-      setStep('upload');
-    }
-  };
+      // Set CPC data
+      setCpcPredictions(data.cpcPredictions);
+      setPrimaryCpc(data.primaryCpc);
+      setTechnologyArea(data.technologyArea);
 
-  // Step 3: Extract PODs using Claude
-  const handlePodExtraction = async () => {
-    setStep('pods');
+      // Show classification results briefly
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-    try {
-      // TODO: Call Claude API to extract PODs
-      // const response = await fetch('/api/extract-pods', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ specText, title, primaryCpc })
-      // });
-      // const data = await response.json();
+      // Move to POD extraction display
+      setStep('pods');
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Mock POD suggestions for testing
-      const mockPods = [
-        {
-          id: 1,
-          text: 'Mobile device interface for patent document creation',
-          rationale: 'Core distinguishing feature from desktop-only prior art',
-          isPrimary: true,
-          suggested: true
-        },
-        {
-          id: 2,
-          text: 'AI-powered claim generation from natural language input',
-          rationale: 'Key innovation over manual drafting',
-          isPrimary: true,
-          suggested: true
-        },
-        {
-          id: 3,
-          text: 'Multi-modal input processing (text, voice, image)',
-          rationale: 'Enhances accessibility and user experience',
-          isPrimary: true,
-          suggested: true
-        },
-        {
-          id: 4,
-          text: 'Real-time prior art checking during drafting',
-          rationale: 'Secondary feature that adds value',
-          isPrimary: false,
-          suggested: true
-        }
-      ];
+      // Transform POD data to match our component structure
+      const transformedPods = data.pods.map((pod, index) => ({
+        id: index + 1,
+        text: pod.pod_text,
+        rationale: pod.rationale,
+        isPrimary: pod.is_primary,
+        suggested: true
+      }));
 
-      setSuggestedPods(mockPods);
-      setApprovedPods(mockPods.filter(p => p.isPrimary)); // Auto-approve primary PODs
+      setSuggestedPods(transformedPods);
+      setApprovedPods(transformedPods.filter(p => p.isPrimary)); // Auto-approve primary PODs
       setIsProcessing(false);
       setStep('review');
 
     } catch (err) {
-      setError(err.message);
+      console.error('Classification error:', err);
+      setError(err.message || 'Classification and POD extraction failed');
       setIsProcessing(false);
       setStep('upload');
     }
@@ -323,7 +289,7 @@ export default function ProvisionalUpload() {
       <div className="max-w-4xl mx-auto p-6">
         <h1 className="text-3xl font-bold mb-2">Upload Provisional Patent Application</h1>
         <p className="text-gray-600 mb-6">
-          Upload your provisional patent data
+          Phase A: Upload your provisional specification to begin monitoring
         </p>
 
         {/* Progress indicator */}
