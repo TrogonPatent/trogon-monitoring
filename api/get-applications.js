@@ -1,13 +1,10 @@
 /**
  * Get Applications - Fetch all provisional applications with POD counts
- * 
- * Returns applications sorted by most recent first
  */
 
 import { neon } from '@neondatabase/serverless';
 
 export default async function handler(req, res) {
-  // Only allow GET
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -15,13 +12,8 @@ export default async function handler(req, res) {
   const sql = neon(process.env.DATABASE_URL);
 
   try {
-    // Get query parameter for showing archived (admin only)
     const showArchived = req.query && req.query.showArchived === 'true';
-
-    // Get all applications (filter archived unless requested)
-    let applications;
     
-    // First, check if archived column exists
     let hasArchivedColumn = true;
     try {
       await sql`SELECT archived FROM applications LIMIT 1`;
@@ -30,42 +22,28 @@ export default async function handler(req, res) {
       console.log('Archived column does not exist yet');
     }
 
+    let applications;
     if (!hasArchivedColumn || showArchived) {
-      // If no archived column or admin wants all, get everything
       applications = await sql`
         SELECT 
-          id,
-          title,
-          filing_date,
-          publication_deadline,
-          is_provisional,
-          predicted_primary_cpc,
-          technology_area,
-          created_at,
-          updated_at
+          id, title, filing_date, publication_deadline,
+          is_provisional, predicted_primary_cpc, technology_area,
+          created_at, updated_at
         FROM applications
         ORDER BY created_at DESC
       `;
     } else {
-      // User view: hide archived
       applications = await sql`
         SELECT 
-          id,
-          title,
-          filing_date,
-          publication_deadline,
-          is_provisional,
-          predicted_primary_cpc,
-          technology_area,
-          created_at,
-          updated_at
+          id, title, filing_date, publication_deadline,
+          is_provisional, predicted_primary_cpc, technology_area,
+          created_at, updated_at
         FROM applications
         WHERE archived = false OR archived IS NULL
         ORDER BY created_at DESC
       `;
     }
 
-    // For each application, get POD count
     const applicationsWithPods = await Promise.all(
       applications.map(async (app) => {
         const podCount = await sql`
@@ -77,8 +55,7 @@ export default async function handler(req, res) {
         const primaryPodCount = await sql`
           SELECT COUNT(*) as count
           FROM pod_definitions
-          WHERE application_id = ${app.id}
-            AND is_primary = true
+          WHERE application_id = ${app.id} AND is_primary = true
         `;
 
         return {
@@ -102,8 +79,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error fetching applications:', error.message);
-    console.error('Stack:', error.stack);
+    console.error('Error fetching applications:', error);
     
     return res.status(500).json({
       error: 'Failed to fetch applications',
@@ -112,16 +88,11 @@ export default async function handler(req, res) {
   }
 }
 
-/**
- * Calculate days until a future date
- */
 function calculateDaysUntil(dateString) {
   if (!dateString) return null;
-  
   const targetDate = new Date(dateString);
   const today = new Date();
   const diffTime = targetDate - today;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
   return diffDays;
 }
