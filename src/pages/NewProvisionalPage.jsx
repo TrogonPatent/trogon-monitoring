@@ -300,364 +300,382 @@ export default function ProvisionalUpload() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-2">Upload Provisional Patent Application</h1>
-      <p className="text-gray-600 mb-6">
-        Phase A: Upload your provisional specification to begin monitoring
-      </p>
-
-      {/* Progress indicator */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <span className={`text-sm ${step === 'upload' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
-            1. Upload
-          </span>
-          <span className={`text-sm ${step === 'classification' || step === 'processing' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
-            2. Classify
-          </span>
-          <span className={`text-sm ${step === 'pods' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
-            3. Extract PODs
-          </span>
-          <span className={`text-sm ${step === 'review' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
-            4. Review
-          </span>
-          <span className={`text-sm ${step === 'complete' ? 'text-green-600 font-semibold' : 'text-gray-500'}`}>
-            5. Complete
-          </span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-            style={{ 
-              width: step === 'upload' ? '0%' : 
-                     step === 'processing' ? '20%' :
-                     step === 'classification' ? '40%' :
-                     step === 'pods' ? '60%' :
-                     step === 'review' ? '80%' : '100%'
-            }}
-          />
+    <div className="min-h-screen bg-gray-50">
+      {/* Back to Dashboard Navigation */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <a 
+            href="/"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="font-medium">Back to Dashboard</span>
+          </a>
         </div>
       </div>
 
-      {/* Error display */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-          {error}
-        </div>
-      )}
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto p-6">
+        <h1 className="text-3xl font-bold mb-2">Upload Provisional Patent Application</h1>
+        <p className="text-gray-600 mb-6">
+          Phase A: Upload your provisional specification to begin monitoring
+        </p>
 
-      {/* Step 1: Upload Form */}
-      {step === 'upload' && (
-        <div className="space-y-6">
-          {/* File Upload */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Upload Provisional Patent Data
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
-              <input
-                type="file"
-                accept=".pdf,.txt"
-                onChange={handleFileChange}
-                className="hidden"
-                id="file-upload"
-              />
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <div className="space-y-2">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <p className="text-sm text-gray-600 font-medium">
-                    {file ? file.name : 'Click to upload PDF or text file'}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    PDF or TXT up to 10MB
-                  </p>
-                  {file && (
-                    <p className="text-xs text-blue-600 font-medium">
-                      ✓ File selected
+        {/* Progress indicator */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className={`text-sm ${step === 'upload' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+              1. Upload
+            </span>
+            <span className={`text-sm ${step === 'classification' || step === 'processing' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+              2. Classify
+            </span>
+            <span className={`text-sm ${step === 'pods' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+              3. Extract PODs
+            </span>
+            <span className={`text-sm ${step === 'review' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+              4. Review
+            </span>
+            <span className={`text-sm ${step === 'complete' ? 'text-green-600 font-semibold' : 'text-gray-500'}`}>
+              5. Complete
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+              style={{ 
+                width: step === 'upload' ? '0%' : 
+                       step === 'processing' ? '20%' :
+                       step === 'classification' ? '40%' :
+                       step === 'pods' ? '60%' :
+                       step === 'review' ? '80%' : '100%'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Error display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* Step 1: Upload Form */}
+        {step === 'upload' && (
+          <div className="space-y-6">
+            {/* File Upload */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Upload Provisional Patent Data
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                <input
+                  type="file"
+                  accept=".pdf,.txt"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <div className="space-y-2">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <p className="text-sm text-gray-600 font-medium">
+                      {file ? file.name : 'Click to upload PDF or text file'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      PDF or TXT up to 10MB
+                    </p>
+                    {file && (
+                      <p className="text-xs text-blue-600 font-medium">
+                        ✓ File selected
+                      </p>
+                    )}
+                  </div>
+                </label>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Title will be auto-generated from file content
+              </p>
+            </div>
+
+            {/* Filing Date (Optional) */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Filing Date <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              
+              {/* Pre-filing checkbox */}
+              <div className="mb-3">
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isPreFiling}
+                    onChange={(e) => {
+                      setIsPreFiling(e.target.checked);
+                      if (e.target.checked) {
+                        setFilingDate(''); // Clear date if switching to pre-filing
+                      }
+                    }}
+                    className="h-4 w-4 text-blue-600 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    This is pre-filing (not yet filed with USPTO)
+                  </span>
+                </label>
+              </div>
+
+              {!isPreFiling && (
+                <div>
+                  <input
+                    type="date"
+                    value={filingDate}
+                    onChange={(e) => setFilingDate(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {filingDate && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Publication deadline: {calculatePublicationDeadline(filingDate)}
                     </p>
                   )}
                 </div>
-              </label>
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              Title will be auto-generated from file content
-            </p>
-          </div>
+              )}
 
-          {/* Filing Date (Optional) */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Filing Date <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            
-            {/* Pre-filing checkbox */}
-            <div className="mb-3">
-              <label className="inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isPreFiling}
-                  onChange={(e) => {
-                    setIsPreFiling(e.target.checked);
-                    if (e.target.checked) {
-                      setFilingDate(''); // Clear date if switching to pre-filing
-                    }
-                  }}
-                  className="h-4 w-4 text-blue-600 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  This is pre-filing (not yet filed with USPTO)
-                </span>
-              </label>
-            </div>
-
-            {!isPreFiling && (
-              <div>
-                <input
-                  type="date"
-                  value={filingDate}
-                  onChange={(e) => setFilingDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                {filingDate && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    Publication deadline: {calculatePublicationDeadline(filingDate)}
+              {isPreFiling && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-700">
+                    Pre-filing mode: No publication deadline tracking yet
                   </p>
-                )}
-              </div>
-            )}
-
-            {isPreFiling && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-700">
-                  Pre-filing mode: No publication deadline tracking yet
-                </p>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={handleUpload}
-            disabled={isProcessing || !file}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            {isProcessing ? 'Processing...' : 'Begin Classification'}
-          </button>
-        </div>
-      )}
-
-      {/* Step 2-3: Processing */}
-      {(step === 'processing' || step === 'classification' || step === 'pods') && (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <h3 className="text-xl font-semibold mb-2">
-            {step === 'processing' && 'Extracting text from file...'}
-            {step === 'classification' && 'Calling USPTO classifier...'}
-            {step === 'pods' && 'Extracting Points of Distinction...'}
-          </h3>
-          <p className="text-gray-600">
-            {step === 'processing' && 'Reading your specification'}
-            {step === 'classification' && 'Predicting CPC classifications'}
-            {step === 'pods' && 'Identifying key distinguishing features'}
-          </p>
-        </div>
-      )}
-
-      {/* Step 4: Review PODs */}
-      {step === 'review' && (
-        <div className="space-y-6">
-          {/* Application Info */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <h3 className="font-semibold mb-2">Application Details</h3>
-            <p className="text-sm mb-1">
-              <span className="font-medium">Title:</span> {title}
-            </p>
-            <p className="text-sm">
-              <span className="font-medium">Status:</span> {isPreFiling ? 'Pre-filing' : `Filed: ${filingDate}`}
-            </p>
-          </div>
-
-          {/* Classification Results */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold mb-2">Classification Results</h3>
-            <div className="space-y-2">
-              <p className="text-sm">
-                <span className="font-medium">Primary CPC:</span> {primaryCpc}
-              </p>
-              <p className="text-sm">
-                <span className="font-medium">Technology Area:</span> {technologyArea}
-              </p>
-              <details className="text-sm">
-                <summary className="cursor-pointer text-blue-600 hover:text-blue-800">
-                  View all predictions ({cpcPredictions.length})
-                </summary>
-                <ul className="mt-2 space-y-1 pl-4">
-                  {cpcPredictions.map((pred, idx) => (
-                    <li key={idx}>
-                      {pred.code} - {pred.description} ({(pred.confidence * 100).toFixed(0)}%)
-                    </li>
-                  ))}
-                </ul>
-              </details>
+                </div>
+              )}
             </div>
+
+            <button
+              onClick={handleUpload}
+              disabled={isProcessing || !file}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              {isProcessing ? 'Processing...' : 'Begin Classification'}
+            </button>
           </div>
+        )}
 
-          {/* POD Review */}
-          <div>
-            <h3 className="text-xl font-semibold mb-4">
-              Review Points of Distinction (PODs)
+        {/* Step 2-3: Processing */}
+        {(step === 'processing' || step === 'classification' || step === 'pods') && (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <h3 className="text-xl font-semibold mb-2">
+              {step === 'processing' && 'Extracting text from file...'}
+              {step === 'classification' && 'Calling USPTO classifier...'}
+              {step === 'pods' && 'Extracting Points of Distinction...'}
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Select at least 3 PODs that best describe your invention's unique features.
-              You can edit text or add custom PODs.
+            <p className="text-gray-600">
+              {step === 'processing' && 'Reading your specification'}
+              {step === 'classification' && 'Predicting CPC classifications'}
+              {step === 'pods' && 'Identifying key distinguishing features'}
             </p>
+          </div>
+        )}
 
-            <div className="space-y-3">
-              {suggestedPods.map((pod) => {
-                const isApproved = approvedPods.find(p => p.id === pod.id);
-                return (
-                  <div 
-                    key={pod.id}
-                    className={`border-2 rounded-lg p-4 transition-all ${
-                      isApproved ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-blue-400'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={!!isApproved}
-                        onChange={() => togglePodApproval(pod.id)}
-                        className="mt-1 h-5 w-5 text-blue-600"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          {pod.isPrimary && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                              Primary
-                            </span>
-                          )}
-                          {pod.suggested && (
-                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                              AI Suggested
-                            </span>
-                          )}
-                        </div>
-                        <textarea
-                          value={pod.text}
-                          onChange={(e) => editPodText(pod.id, e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          rows={2}
+        {/* Step 4: Review PODs */}
+        {step === 'review' && (
+          <div className="space-y-6">
+            {/* Application Info */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="font-semibold mb-2">Application Details</h3>
+              <p className="text-sm mb-1">
+                <span className="font-medium">Title:</span> {title}
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Status:</span> {isPreFiling ? 'Pre-filing' : `Filed: ${filingDate}`}
+              </p>
+            </div>
+
+            {/* Classification Results */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold mb-2">Classification Results</h3>
+              <div className="space-y-2">
+                <p className="text-sm">
+                  <span className="font-medium">Primary CPC:</span> {primaryCpc}
+                </p>
+                <p className="text-sm">
+                  <span className="font-medium">Technology Area:</span> {technologyArea}
+                </p>
+                <details className="text-sm">
+                  <summary className="cursor-pointer text-blue-600 hover:text-blue-800">
+                    View all predictions ({cpcPredictions.length})
+                  </summary>
+                  <ul className="mt-2 space-y-1 pl-4">
+                    {cpcPredictions.map((pred, idx) => (
+                      <li key={idx}>
+                        {pred.code} - {pred.description} ({(pred.confidence * 100).toFixed(0)}%)
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              </div>
+            </div>
+
+            {/* POD Review */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">
+                Review Points of Distinction (PODs)
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Select at least 3 PODs that best describe your invention's unique features.
+                You can edit text or add custom PODs.
+              </p>
+
+              <div className="space-y-3">
+                {suggestedPods.map((pod) => {
+                  const isApproved = approvedPods.find(p => p.id === pod.id);
+                  return (
+                    <div 
+                      key={pod.id}
+                      className={`border-2 rounded-lg p-4 transition-all ${
+                        isApproved ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-blue-400'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={!!isApproved}
+                          onChange={() => togglePodApproval(pod.id)}
+                          className="mt-1 h-5 w-5 text-blue-600"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Rationale: {pod.rationale}
-                        </p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {pod.isPrimary && (
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                Primary
+                              </span>
+                            )}
+                            {pod.suggested && (
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                                AI Suggested
+                              </span>
+                            )}
+                          </div>
+                          <textarea
+                            value={pod.text}
+                            onChange={(e) => editPodText(pod.id, e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            rows={2}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Rationale: {pod.rationale}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={addCustomPod}
+                className="mt-4 w-full border-2 border-dashed border-gray-300 rounded-lg py-3 text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
+              >
+                + Add Custom POD
+              </button>
             </div>
 
-            <button
-              onClick={addCustomPod}
-              className="mt-4 w-full border-2 border-dashed border-gray-300 rounded-lg py-3 text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
-            >
-              + Add Custom POD
-            </button>
-          </div>
-
-          {/* Approval Summary */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <p className="text-sm">
-              <span className="font-medium">Approved PODs:</span> {approvedPods.length}
-              {approvedPods.length < 3 && (
-                <span className="text-red-600 ml-2">
-                  (Minimum 3 required)
-                </span>
-              )}
-            </p>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-4">
-            <button
-              onClick={() => {
-                setStep('upload');
-                setFile(null);
-                setError(null);
-              }}
-              className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-            >
-              Start Over
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isProcessing || approvedPods.length < 3}
-              className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            >
-              {isProcessing ? 'Saving...' : 'Save & Continue'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 5: Complete */}
-      {step === 'complete' && (
-        <div className="text-center py-12">
-          <div className="inline-block bg-green-100 rounded-full p-4 mb-4">
-            <svg className="h-12 w-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Provisional Application Uploaded!</h2>
-          <p className="text-gray-600 mb-6">
-            Your application has been saved and is ready for monitoring.
-          </p>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
-            <p className="text-sm text-gray-600 mb-2">Application Details:</p>
-            <p className="font-medium">{title}</p>
-            <p className="text-sm text-gray-600">
-              {isPreFiling ? 'Pre-filing' : `Filed: ${filingDate}`}
-            </p>
-            {!isPreFiling && (
-              <p className="text-sm text-gray-600">
-                Publication: {calculatePublicationDeadline(filingDate)}
+            {/* Approval Summary */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <p className="text-sm">
+                <span className="font-medium">Approved PODs:</span> {approvedPods.length}
+                {approvedPods.length < 3 && (
+                  <span className="text-red-600 ml-2">
+                    (Minimum 3 required)
+                  </span>
+                )}
               </p>
-            )}
-            <p className="text-sm text-gray-600 mt-2">PODs Approved: {approvedPods.length}</p>
-            <p className="text-xs text-gray-500 mt-2 font-mono">ID: {applicationId}</p>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setStep('upload');
+                  setFile(null);
+                  setError(null);
+                }}
+                className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Start Over
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isProcessing || approvedPods.length < 3}
+                className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {isProcessing ? 'Saving...' : 'Save & Continue'}
+              </button>
+            </div>
           </div>
-          <div className="space-x-4">
-            <button
-              onClick={() => {
-                // Reset form for new application
-                setStep('upload');
-                setTitle('');
-                setFilingDate('');
-                setFile(null);
-                setSpecText('');
-                setSuggestedPods([]);
-                setApprovedPods([]);
-                setApplicationId(null);
-                setIsPreFiling(true);
-              }}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-            >
-              Upload Another
-            </button>
-            <button
-              onClick={() => {
-                // TODO: Navigate to Phase B (POD-based search)
-                console.log('Navigate to POD search for application:', applicationId);
-              }}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-            >
-              Continue to Search →
-            </button>
+        )}
+
+        {/* Step 5: Complete */}
+        {step === 'complete' && (
+          <div className="text-center py-12">
+            <div className="inline-block bg-green-100 rounded-full p-4 mb-4">
+              <svg className="h-12 w-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Provisional Application Uploaded!</h2>
+            <p className="text-gray-600 mb-6">
+              Your application has been saved and is ready for monitoring.
+            </p>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
+              <p className="text-sm text-gray-600 mb-2">Application Details:</p>
+              <p className="font-medium">{title}</p>
+              <p className="text-sm text-gray-600">
+                {isPreFiling ? 'Pre-filing' : `Filed: ${filingDate}`}
+              </p>
+              {!isPreFiling && (
+                <p className="text-sm text-gray-600">
+                  Publication: {calculatePublicationDeadline(filingDate)}
+                </p>
+              )}
+              <p className="text-sm text-gray-600 mt-2">PODs Approved: {approvedPods.length}</p>
+              <p className="text-xs text-gray-500 mt-2 font-mono">ID: {applicationId}</p>
+            </div>
+            <div className="space-x-4">
+              <button
+                onClick={() => {
+                  // Reset form for new application
+                  setStep('upload');
+                  setTitle('');
+                  setFilingDate('');
+                  setFile(null);
+                  setSpecText('');
+                  setSuggestedPods([]);
+                  setApprovedPods([]);
+                  setApplicationId(null);
+                  setIsPreFiling(true);
+                }}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Upload Another
+              </button>
+              <button
+                onClick={() => {
+                  // TODO: Navigate to Phase B (POD-based search)
+                  console.log('Navigate to POD search for application:', applicationId);
+                }}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              >
+                Continue to Search →
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
