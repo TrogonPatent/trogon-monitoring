@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Calendar, Code, AlertCircle, Plus } from 'lucide-react';
+import { FileText, Calendar, Code, AlertCircle, Plus, Trash2 } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [archiving, setArchiving] = useState(null); // ID of app being archived
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [appToArchive, setAppToArchive] = useState(null);
 
   // Fetch applications on mount
   useEffect(() => {
@@ -46,6 +49,50 @@ export default function Dashboard() {
     });
   };
 
+  // Archive application (soft delete)
+  const handleArchiveClick = (app, e) => {
+    e.stopPropagation(); // Prevent card click
+    setAppToArchive(app);
+    setShowConfirm(true);
+  };
+
+  const confirmArchive = async () => {
+    if (!appToArchive) return;
+
+    try {
+      setArchiving(appToArchive.id);
+      setShowConfirm(false);
+
+      const response = await fetch('/api/archive-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicationId: appToArchive.id,
+          userEmail: 'brad@trogonpatent.ai' // TODO: Get from auth context
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to archive application');
+      }
+
+      // Remove from UI
+      setApplications(applications.filter(a => a.id !== appToArchive.id));
+      setAppToArchive(null);
+
+    } catch (err) {
+      console.error('Error archiving application:', err);
+      setError(err.message);
+    } finally {
+      setArchiving(null);
+    }
+  };
+
+  const cancelArchive = () => {
+    setShowConfirm(false);
+    setAppToArchive(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -61,7 +108,7 @@ export default function Dashboard() {
               className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-5 h-5" />
-              Upload Provisional Patent
+              Add New Provisional Patent Data
             </button>
           </div>
         </div>
@@ -69,6 +116,36 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Archive Confirmation Dialog */}
+        {showConfirm && appToArchive && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Archive Application?
+              </h3>
+              <p className="text-gray-600 mb-4">
+                "{appToArchive.title}" will be hidden from your dashboard but retained for legal audit trail and IDS compliance.
+              </p>
+              <p className="text-sm text-gray-500 mb-6">
+                You can contact support to restore archived applications if needed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelArchive}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmArchive}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                >
+                  Archive
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
@@ -109,7 +186,7 @@ export default function Dashboard() {
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-5 h-5" />
-              Upload Provisional Patent
+              Add New Provisional Patent Data
             </button>
           </div>
         )}
@@ -130,11 +207,25 @@ export default function Dashboard() {
               {applications.map((app) => (
                 <div
                   key={app.id}
-                  className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/application/${app.id}`)}
+                  className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow relative"
                 >
-                  {/* Header */}
-                  <div className="mb-4">
+                  {/* Archive Button */}
+                  <button
+                    onClick={(e) => handleArchiveClick(app, e)}
+                    disabled={archiving === app.id}
+                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                    title="Archive application"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+
+                  {/* Card Content - Clickable */}
+                  <div
+                    className="cursor-pointer pr-8"
+                    onClick={() => navigate(`/application/${app.id}`)}
+                  >
+                    {/* Header */}
+                    <div className="mb-4">
                     <h3 className="font-semibold text-gray-900 text-lg mb-2 line-clamp-2">
                       {app.title}
                     </h3>
@@ -217,12 +308,14 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  {/* Footer */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <p className="text-xs text-gray-500">
-                      Created {formatDate(app.created_at)}
-                    </p>
+                    {/* Footer */}
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <p className="text-xs text-gray-500">
+                        Created {formatDate(app.created_at)}
+                      </p>
+                    </div>
                   </div>
+                  {/* End clickable div */}
                 </div>
               ))}
             </div>
