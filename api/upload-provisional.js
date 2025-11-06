@@ -238,7 +238,7 @@ export default async function handler(req, res) {
     const sql = neon(process.env.DATABASE_URL);
     
     const result = await sql`
-      INSERT INTO applications (
+      INSERT INTO public.applications (
         title,
         filing_date,
         publication_deadline,
