@@ -33,8 +33,22 @@ export default async function handler(req, res) {
     // Call Claude API using Template 2
     const claudeResponse = await callClaudeAPI(specText, title);
 
+    console.log('Claude raw response (first 200 chars):', claudeResponse.substring(0, 200));
+
+    // Strip markdown code blocks if present
+    const cleanedResponse = stripMarkdownCodeBlocks(claudeResponse);
+
+    console.log('Cleaned response (first 200 chars):', cleanedResponse.substring(0, 200));
+
     // Parse Claude's JSON response
-    const result = JSON.parse(claudeResponse);
+    let result;
+    try {
+      result = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError.message);
+      console.error('Attempted to parse:', cleanedResponse.substring(0, 500));
+      throw new Error(`Failed to parse Claude response: ${parseError.message}`);
+    }
 
     // Validate response structure
     if (!result.pods || !Array.isArray(result.pods) || result.pods.length === 0) {
@@ -74,6 +88,29 @@ export default async function handler(req, res) {
       message: error.message
     });
   }
+}
+
+/**
+ * Strip markdown code blocks from Claude's response
+ * Claude sometimes wraps JSON in ```json ... ``` even when told not to
+ */
+function stripMarkdownCodeBlocks(text) {
+  // Remove ```json at start and ``` at end
+  let cleaned = text.trim();
+  
+  // Check if it starts with ```json or ```
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.substring(7); // Remove ```json
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.substring(3); // Remove ```
+  }
+  
+  // Check if it ends with ```
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.substring(0, cleaned.length - 3);
+  }
+  
+  return cleaned.trim();
 }
 
 /**
@@ -175,7 +212,8 @@ FORMAT YOUR RESPONSE AS JSON:
   "primary_cpc_prediction": "G06F 40/169"
 }
 
-OUTPUT ONLY VALID JSON - no markdown formatting or explanations.`;
+OUTPUT ONLY VALID JSON - no markdown formatting, no code blocks, no explanations.
+Your response must start with { and end with }.`;
 }
 
 /**
