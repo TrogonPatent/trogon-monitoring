@@ -39,8 +39,7 @@ function App() {
             <Route path="/" element={<Dashboard userEmail={userEmail} />} />
             
             {/* Hunt System Routes */}
-            <Route path="/hunt" element={<Dashboard userEmail={userEmail} />} />
-            <Route path="/hunt/provisional/new" element={<NewProvisionalPage userEmail={userEmail} />} />
+            <Route path="/provisional/new" element={<NewProvisionalPage userEmail={userEmail} />} />
             
             {/* Future Hunt routes - uncomment as you build them */}
             {/* <Route path="/hunt/provisional/:id" element={<ApplicationDetails userEmail={userEmail} />} /> */}
