@@ -3,38 +3,16 @@ import AuthGate from './pages/AuthGate';
 import Dashboard from './pages/Dashboard';
 import NewProvisionalPage from './pages/NewProvisionalPage';
 import ApplicationDetail from './pages/ApplicationDetail';
-// In your Routes:
-<Routes>
-  <Route path="/" element={<Dashboard />} />
-  <Route path="/provisional/new" element={<NewProvisionalPage />} />
-  <Route path="/application/:id" element={<ApplicationDetail />} />  {/* ADD THIS */}
-</Routes>
 
 /**
  * Router Configuration for Trogon Monitoring System
  * 
  * SIMPLIFIED ROUTING: Auth → Hunt Dashboard (direct)
  * 
- * Rationale:
- * - Submarine not functional until Phase F (Jan 2026)
- * - Landing page adds unnecessary friction during development
- * - Only 2 users (Brad/Laura) who know what they're working on
- * - Can add landing page back when Submarine is ready
- * 
  * Routes:
  * - / → Hunt dashboard (direct after auth)
- * - /hunt → Hunt dashboard (alias)
- * - /hunt/provisional/new → Upload new provisional (Phase A)
- * 
- * Future Phase Routes (add as you build):
- * - /hunt/provisional/:id → Application details
- * - /hunt/provisional/:id/search → Phase B: POD-based search
- * - /hunt/provisional/:id/classify → Phase C: Classification validation
- * - /hunt/provisional/:id/threshold → Phase F: Threshold selection
- * - /hunt/provisional/:id/monitoring → Phase G: Monitoring dashboard
- * 
- * Note: Landing page and Submarine routes removed temporarily.
- * Will be re-added when Submarine is functional (Phase F complete).
+ * - /provisional/new → Upload new provisional (Phase A)
+ * - /application/:id → Application detail view (NEW)
  */
 function App() {
   return (
@@ -48,8 +26,10 @@ function App() {
             {/* Hunt System Routes */}
             <Route path="/provisional/new" element={<NewProvisionalPage userEmail={userEmail} />} />
             
+            {/* Application Detail - NEW */}
+            <Route path="/application/:id" element={<ApplicationDetail userEmail={userEmail} />} />
+            
             {/* Future Hunt routes - uncomment as you build them */}
-            {/* <Route path="/hunt/provisional/:id" element={<ApplicationDetails userEmail={userEmail} />} /> */}
             {/* <Route path="/hunt/provisional/:id/search" element={<PodSearch userEmail={userEmail} />} /> */}
             {/* <Route path="/hunt/provisional/:id/classify" element={<ClassificationValidation userEmail={userEmail} />} /> */}
             {/* <Route path="/hunt/provisional/:id/threshold" element={<ThresholdSelection userEmail={userEmail} />} /> */}
