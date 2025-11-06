@@ -121,16 +121,8 @@ export default async function handler(req, res) {
     const { formData, files } = await parseFormData(req);
     
     // Validate required fields
-    const { title, filingDate } = formData;
+    const { filingDate, isPreFiling } = formData;
     const file = files.file;
-    
-    if (!title) {
-      return res.status(400).json({ error: 'Title is required' });
-    }
-    
-    if (!filingDate) {
-      return res.status(400).json({ error: 'Filing date is required' });
-    }
     
     if (!file) {
       return res.status(400).json({ error: 'File is required' });
@@ -153,6 +145,9 @@ export default async function handler(req, res) {
     
     console.log(`Extracted ${extractedText.length} characters from ${file.filename}`);
     
+    // Auto-generate title from filename or first line of text
+    const autoTitle = generateTitle(file.filename, extractedText);
+    
     // Store file in Vercel Blob
     console.log('Uploading file to Vercel Blob...');
     const blob = await put(file.filename, file.buffer, {
@@ -162,8 +157,10 @@ export default async function handler(req, res) {
     
     console.log('File uploaded to:', blob.url);
     
-    // Calculate publication deadline
-    const publicationDeadline = calculatePublicationDeadline(filingDate);
+    // Calculate publication deadline (only if filed)
+    const publicationDeadline = (isPreFiling === 'false' && filingDate) 
+      ? calculatePublicationDeadline(filingDate) 
+      : null;
     
     // Save to database
     const sql = neon(process.env.DATABASE_URL);
@@ -180,8 +177,8 @@ export default async function handler(req, res) {
         created_at,
         updated_at
       ) VALUES (
-        ${title},
-        ${filingDate},
+        ${autoTitle},
+        ${filingDate || null},
         ${publicationDeadline},
         true,
         ${extractedText},
@@ -204,7 +201,9 @@ export default async function handler(req, res) {
       title: application.title,
       filingDate: application.filing_date,
       publicationDeadline: application.publication_deadline,
+      isPreFiling: isPreFiling === 'true' || !filingDate,
       textLength: extractedText.length,
+      extractedText: extractedText.substring(0, 500) + '...', // Send preview only
       fileUrl: blob.url,
       fileName: file.filename,
       message: 'Provisional application uploaded successfully'
@@ -216,4 +215,54 @@ export default async function handler(req, res) {
       error: error.message || 'Failed to upload provisional application' 
     });
   }
+}
+
+// Helper: Auto-generate title from filename or text
+function generateTitle(filename, text) {
+  // Try to extract title from filename (remove extension)
+  let title = filename.replace(/\.(pdf|txt)$/i, '').replace(/[-_]/g, ' ');
+  
+  // If filename is generic, try to extract from first heading or first line
+  const genericNames = ['provisional', 'patent', 'spec', 'specification', 'application', 'document'];
+  const isGeneric = genericNames.some(name => title.toLowerCase().includes(name));
+  
+  if (isGeneric || title.length < 5) {
+    // Try to find first heading or title in text
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    
+    for (const line of lines.slice(0, 10)) { // Check first 10 lines
+      const trimmed = line.trim();
+      
+      // Skip common headers
+      if (/^(background|summary|detailed|abstract|field|technical)/i.test(trimmed)) {
+        continue;
+      }
+      
+      // Use first substantial line (10-100 chars, not all caps unless reasonable)
+      if (trimmed.length >= 10 && trimmed.length <= 100) {
+        const isAllCaps = trimmed === trimmed.toUpperCase();
+        const wordCount = trimmed.split(/\s+/).length;
+        
+        // Use it if it's not all caps, or if all caps but reasonable length (3-10 words)
+        if (!isAllCaps || (wordCount >= 3 && wordCount <= 10)) {
+          title = trimmed;
+          break;
+        }
+      }
+    }
+  }
+  
+  // Capitalize and clean up
+  title = title
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+    .substring(0, 200); // Max 200 chars
+  
+  // If still generic or empty, use default
+  if (!title || title.length < 5) {
+    title = 'Untitled Provisional Application';
+  }
+  
+  return title;
 }
