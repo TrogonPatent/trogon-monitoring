@@ -21,43 +21,16 @@ export default function Dashboard() {
       // const data = await response.json();
       // setApplications(data);
 
-      // Mock data for testing
-      const mockApps = [
-        {
-          id: '1',
-          title: 'Mobile Patent Filing System',
-          filingDate: '2025-07-23',
-          publicationDeadline: '2027-01-23',
-          technologyArea: 'Software/Mobile Applications',
-          primaryCpc: 'G06F 40/169',
-          status: 'active',
-          podCount: 4,
-          monitoringActive: false,
-          patentabilityScore: null,
-          createdAt: '2025-11-05'
-        },
-        {
-          id: '2',
-          title: 'Patent Asset Management Platform',
-          filingDate: '2025-08-21',
-          publicationDeadline: '2027-02-21',
-          technologyArea: 'Business Methods/Legal Tech',
-          primaryCpc: 'G06Q 50/18',
-          status: 'active',
-          podCount: 3,
-          monitoringActive: false,
-          patentabilityScore: null,
-          createdAt: '2025-11-05'
-        }
-      ];
-
-      setApplications(mockApps);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Failed to load applications:', error);
-      setIsLoading(false);
-    }
-  };
+const loadApplications = async () => {
+  try {
+    setApplications([]);
+    setIsLoading(false);
+  } catch (error) {
+    console.error('Failed to load applications:', error);
+    setIsLoading(false);
+  }
+};
+```
 
   const getStatusBadge = (status) => {
     const styles = {
