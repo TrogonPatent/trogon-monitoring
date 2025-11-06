@@ -26,7 +26,7 @@ export default function Dashboard({ userEmail }) {
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-lg shadow-2xl p-8">
           {/* Header with Video and Centered Title */}
-          <div className="mb-8 pb-6 border-b border-slate-200">
+          <div className="mb-6 pb-4 border-b border-slate-200">
             <div className="flex justify-between items-center">
               {/* Video at left */}
               <div className="relative bg-slate-900 rounded-lg overflow-hidden" style={{ width: '240px', height: '135px' }}>
@@ -68,10 +68,10 @@ export default function Dashboard({ userEmail }) {
             </div>
           </div>
 
-          {/* Empty State */}
-          <div className="text-center py-16">
-            {/* Large binoculars - 256px */}
-            <div className="inline-flex items-center justify-center w-64 h-64 mb-6">
+          {/* Empty State - REDUCED PADDING */}
+          <div className="text-center py-8">
+            {/* Large binoculars - 256px with reduced bottom margin */}
+            <div className="inline-flex items-center justify-center w-64 h-64 mb-4">
               <img 
                 src="/binoculars-icon.png" 
                 alt="Binoculars" 
@@ -79,7 +79,7 @@ export default function Dashboard({ userEmail }) {
               />
             </div>
             <h2 className="text-2xl font-bold text-slate-900 mb-3">No Provisional Applications Yet</h2>
-            <p className="text-slate-600 mb-8 max-w-md mx-auto">
+            <p className="text-slate-600 mb-6 max-w-md mx-auto">
               Upload your first provisional patent to begin Points of Distinction ("PODs") extraction, prior art search, and classification validation
             </p>
             <button
@@ -91,8 +91,8 @@ export default function Dashboard({ userEmail }) {
             </button>
           </div>
 
-          {/* Step Overview */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Step Overview - REDUCED TOP MARGIN */}
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Step 1 Card - FileText Icon */}
             <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
               <div className="flex items-center gap-3 mb-3">
@@ -106,7 +106,7 @@ export default function Dashboard({ userEmail }) {
               </p>
             </div>
 
-            {/* Step 2 Card - Search/Magnifying Glass Icon (back to original) */}
+            {/* Step 2 Card - Search/Magnifying Glass Icon */}
             <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
               <div className="flex items-center gap-3 mb-3">
                 <div className="bg-emerald-100 p-2 rounded-lg">
