@@ -41,7 +41,7 @@ export default function AuthGate({ children }) {
         <div className="max-w-md w-full">
           <div className="bg-white rounded-lg shadow-2xl p-8">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-24 h-24 mb-4">
+              <div className="inline-flex items-center justify-center w-32 h-32 mb-4">
                 <img 
                   src="/binoculars-icon.png" 
                   alt="Binoculars" 
