@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Phase A: Provisional Upload & Classification
@@ -12,6 +13,7 @@ import { useState } from 'react';
  */
 
 export default function ProvisionalUpload() {
+  const navigate = useNavigate();
   // Form state
   const [filingDate, setFilingDate] = useState('');
   const [file, setFile] = useState(null);
@@ -299,21 +301,22 @@ export default function ProvisionalUpload() {
     return date.toISOString().split('T')[0];
   };
 
-  return (
+return (
     <div className="min-h-screen bg-gray-50">
       {/* Back to Dashboard Navigation */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-6 py-4">
-          <a 
-            href="/"
-            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          <button
+            onClick={() => navigate('/')}
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             <span className="font-medium">Back to Dashboard</span>
-          </a>
+          </button>
         </div>
+      </div>>
       </div>
 
       {/* Main Content */}
