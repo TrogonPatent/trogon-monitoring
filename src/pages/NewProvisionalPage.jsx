@@ -241,30 +241,38 @@ export default function ProvisionalUpload() {
     setError(null);
 
     try {
-      // TODO: Save to database
-      // const response = await fetch('/api/save-provisional', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     applicationId,
-      //     title,
-      //     filingDate,
-      //     isPreFiling,
-      //     specText,
-      //     cpcPredictions,
-      //     primaryCpc,
-      //     technologyArea,
-      //     approvedPods
-      //   })
-      // });
-      // const data = await response.json();
+      // Call save API
+      const response = await fetch('/api/save-provisional', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicationId,
+          title,
+          filingDate: isPreFiling ? null : filingDate,
+          isPreFiling,
+          cpcPredictions,
+          primaryCpc,
+          technologyArea,
+          approvedPods
+        })
+      });
 
-      // Mock successful save (already have applicationId from upload)
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Save failed');
+      }
+
+      const data = await response.json();
+
+      console.log('Save successful:', data.summary);
+
+      // Move to complete step
       setStep('complete');
       setIsProcessing(false);
 
     } catch (err) {
-      setError(err.message);
+      console.error('Save error:', err);
+      setError(err.message || 'Failed to save provisional data');
       setIsProcessing(false);
     }
   };
