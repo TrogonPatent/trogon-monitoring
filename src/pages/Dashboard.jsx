@@ -14,16 +14,21 @@ export default function Dashboard() {
     loadApplications();
   }, []);
 
-const loadApplications = async () => {
-  try {
-    setApplications([]);
-    setIsLoading(false);
-  } catch (error) {
-    console.error('Failed to load applications:', error);
-    setIsLoading(false);
-  }
-};
-```
+  const loadApplications = async () => {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch('/api/applications');
+      // const data = await response.json();
+      // setApplications(data);
+
+      // Start with empty for now
+      setApplications([]);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Failed to load applications:', error);
+      setIsLoading(false);
+    }
+  };
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -106,7 +111,7 @@ const loadApplications = async () => {
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-sm text-gray-600 mb-1">Total PODs</p>
             <p className="text-3xl font-bold text-purple-600">
-              {applications.reduce((sum, a) => sum + a.podCount, 0)}
+              {applications.reduce((sum, a) => sum + (a.podCount || 0), 0)}
             </p>
           </div>
         </div>
@@ -231,7 +236,7 @@ const loadApplications = async () => {
                 <li>GET /api/applications/:id - Fetch single application details</li>
                 <li>POST /api/applications/:id/start-monitoring - Begin Phase B</li>
               </ul>
-              <p>📊 Current State: Using mock data for UI testing</p>
+              <p>📊 Current State: No mock data - empty dashboard</p>
               <p>🎯 Next: Build backend API routes</p>
             </div>
           </details>
