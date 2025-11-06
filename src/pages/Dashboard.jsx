@@ -69,7 +69,7 @@ export default function Dashboard({ userEmail }) {
 
           {/* Empty State */}
           <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-32 h-32 mb-6">
+            <div className="inline-flex items-center justify-center w-40 h-40 mb-6">
               <img 
                 src="/binoculars-icon.png" 
                 alt="Binoculars" 
