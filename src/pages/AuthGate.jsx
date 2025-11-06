@@ -27,7 +27,7 @@ export default function AuthGate({ children }) {
     const normalizedEmail = email.toLowerCase().trim();
 
     if (!AUTHORIZED_EMAILS.includes(normalizedEmail)) {
-      setError('Access denied. This email is not authorized to access the Hunt system.');
+      setError('Access denied. This email is not authorized to access the trogon hunt system.');
       return;
     }
 
@@ -48,7 +48,7 @@ export default function AuthGate({ children }) {
                   className="w-full h-full object-contain"
                 />
               </div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">trogon Hunt</h1>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">trogon hunt</h1>
               <p className="text-slate-600">Prior Art Search</p>
             </div>
 
