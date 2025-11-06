@@ -14,13 +14,6 @@ export default function Dashboard() {
     loadApplications();
   }, []);
 
-  const loadApplications = async () => {
-    try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/applications');
-      // const data = await response.json();
-      // setApplications(data);
-
 const loadApplications = async () => {
   try {
     setApplications([]);
