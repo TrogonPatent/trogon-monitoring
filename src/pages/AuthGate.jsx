@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Binoculars } from 'lucide-react';
 
 /**
- * AuthGate - Authentication Gateway for Monitoring System
+ * AuthGate - Authentication Gateway for Hunt System
  * 
  * Uses render prop pattern to pass authenticated userEmail to child routes
  * 
@@ -10,7 +10,7 @@ import { Mail, Lock, AlertCircle } from 'lucide-react';
  * <AuthGate>
  *   {(userEmail) => (
  *     <Routes>
- *       <Route path="/" element={<Landing userEmail={userEmail} />} />
+ *       <Route path="/" element={<Dashboard userEmail={userEmail} />} />
  *     </Routes>
  *   )}
  * </AuthGate>
@@ -27,7 +27,7 @@ export default function AuthGate({ children }) {
     const normalizedEmail = email.toLowerCase().trim();
 
     if (!AUTHORIZED_EMAILS.includes(normalizedEmail)) {
-      setError('Access denied. This email is not authorized to access the monitoring system.');
+      setError('Access denied. This email is not authorized to access the Hunt system.');
       return;
     }
 
@@ -42,10 +42,10 @@ export default function AuthGate({ children }) {
           <div className="bg-white rounded-lg shadow-2xl p-8">
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                <Lock className="w-8 h-8 text-blue-600" />
+                <Binoculars className="w-8 h-8 text-blue-600" />
               </div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Trogon Monitoring</h1>
-              <p className="text-slate-600">Patent Prior Art & Submarine Monitoring</p>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">Trogon Hunt</h1>
+              <p className="text-slate-600">Prior Art Search</p>
             </div>
 
             <div className="space-y-6">
@@ -81,16 +81,15 @@ export default function AuthGate({ children }) {
                 onClick={handleAuth}
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
-                Access Monitoring System
+                Access Hunt System
               </button>
             </div>
 
             <div className="mt-6 pt-6 border-t border-slate-200">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-900 mb-2">System Access</h3>
+                <h3 className="text-sm font-semibold text-blue-900 mb-2">Hunt System</h3>
                 <ul className="text-xs text-blue-800 space-y-1">
                   <li>🔍 <strong>Hunt:</strong> POD-based prior art search (Phase A-C)</li>
-                  <li>🔒 <strong>Submarine:</strong> 18-month monitoring (Phase F-G)</li>
                 </ul>
               </div>
             </div>
