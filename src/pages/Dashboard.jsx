@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, LogOut } from 'lucide-react';
+import { Plus, Search, FileText, LogOut } from 'lucide-react';
 
 /**
  * Hunt Dashboard - Main landing page for Hunt system
@@ -27,9 +27,8 @@ export default function Dashboard({ userEmail }) {
         <div className="bg-white rounded-lg shadow-2xl p-8">
           {/* Header with Video and Centered Title */}
           <div className="mb-8 pb-6 border-b border-slate-200">
-            {/* Top Row: Video (left) and Logout (right) */}
-            <div className="flex justify-between items-start mb-4">
-              {/* Video at top left */}
+            <div className="flex justify-between items-center">
+              {/* Video at left */}
               <div className="relative bg-slate-900 rounded-lg overflow-hidden" style={{ width: '240px', height: '135px' }}>
                 <video
                   className="absolute inset-0 w-full h-full"
@@ -43,7 +42,13 @@ export default function Dashboard({ userEmail }) {
                 </video>
               </div>
               
-              {/* Logout button top right */}
+              {/* Centered Title - vertically aligned with video */}
+              <div className="flex-1 text-center">
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">trogon Hunt Dashboard</h1>
+                <p className="text-slate-600">Prior Art Search & Classification Validation</p>
+              </div>
+              
+              {/* Logout at right - vertically aligned with video */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-emerald-600 text-sm">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,12 +65,6 @@ export default function Dashboard({ userEmail }) {
                   Logout
                 </button>
               </div>
-            </div>
-            
-            {/* Centered Title - BELOW video/logout row */}
-            <div className="text-center">
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">trogon Hunt Dashboard</h1>
-              <p className="text-slate-600">Prior Art Search & Classification Validation</p>
             </div>
           </div>
 
@@ -94,7 +93,7 @@ export default function Dashboard({ userEmail }) {
 
           {/* Step Overview */}
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Step 1 Card - Original FileText Icon */}
+            {/* Step 1 Card - FileText Icon */}
             <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
               <div className="flex items-center gap-3 mb-3">
                 <div className="bg-blue-100 p-2 rounded-lg">
@@ -107,15 +106,11 @@ export default function Dashboard({ userEmail }) {
               </p>
             </div>
 
-            {/* Step 2 Card - Binoculars Icon */}
+            {/* Step 2 Card - Search/Magnifying Glass Icon (back to original) */}
             <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
               <div className="flex items-center gap-3 mb-3">
-                <div className="bg-emerald-100 p-2 rounded-lg flex items-center justify-center" style={{ width: '36px', height: '36px' }}>
-                  <img 
-                    src="/binoculars-icon.png" 
-                    alt="Binoculars" 
-                    className="w-5 h-5 object-contain"
-                  />
+                <div className="bg-emerald-100 p-2 rounded-lg">
+                  <Search className="w-5 h-5 text-emerald-600" />
                 </div>
                 <h3 className="font-bold text-slate-900">Step 2: Search</h3>
               </div>
@@ -124,7 +119,7 @@ export default function Dashboard({ userEmail }) {
               </p>
             </div>
 
-            {/* Step 3 Card - Original Checkmark Icon */}
+            {/* Step 3 Card - Checkmark Icon */}
             <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
               <div className="flex items-center gap-3 mb-3">
                 <div className="bg-purple-100 p-2 rounded-lg">
