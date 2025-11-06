@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 
+/**
+ * AuthGate - Authentication Gateway for Monitoring System
+ * 
+ * Uses render prop pattern to pass authenticated userEmail to child routes
+ * 
+ * Usage in App.jsx:
+ * <AuthGate>
+ *   {(userEmail) => (
+ *     <Routes>
+ *       <Route path="/" element={<Landing userEmail={userEmail} />} />
+ *     </Routes>
+ *   )}
+ * </AuthGate>
+ */
 export default function AuthGate({ children }) {
   const [email, setEmail] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -13,7 +27,7 @@ export default function AuthGate({ children }) {
     const normalizedEmail = email.toLowerCase().trim();
 
     if (!AUTHORIZED_EMAILS.includes(normalizedEmail)) {
-      setError('Access denied.');
+      setError('Access denied. This email is not authorized to access the monitoring system.');
       return;
     }
 
@@ -47,10 +61,14 @@ export default function AuthGate({ children }) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAuth()}
-                    placeholder="brad@trogonpatent.ai"
+                    placeholder="your.email@example.com"
                     className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Access restricted to authorized users
+                </p>
+              </div>
 
               {error && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
