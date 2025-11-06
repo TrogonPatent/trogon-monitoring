@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Search, FileText } from 'lucide-react';
+import { Plus, Search, FileText, LogOut } from 'lucide-react';
 
 /**
  * Hunt Dashboard - Main landing page for Hunt system
@@ -12,18 +12,18 @@ import { ArrowLeft, Plus, Search, FileText } from 'lucide-react';
 export default function Dashboard({ userEmail }) {
   const navigate = useNavigate();
 
+  const handleLogout = () => {
+    // Clear any session storage
+    sessionStorage.clear();
+    localStorage.clear();
+    
+    // Reload to auth page
+    window.location.href = '/';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-12 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/')}
-          className="mb-4 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Home
-        </button>
-
         <div className="bg-white rounded-lg shadow-2xl p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
@@ -45,6 +45,14 @@ export default function Dashboard({ userEmail }) {
                 </svg>
                 <span>{userEmail}</span>
               </div>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
             </div>
           </div>
 
