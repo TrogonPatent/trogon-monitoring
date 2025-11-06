@@ -37,7 +37,8 @@ function App() {
         {(userEmail) => (
           <Routes>
             {/* Landing page - choose Hunt or Submarine */}
-            <Route path="/" element={<MonitoringLanding userEmail={userEmail} />} />
+            <Route path="/" element={<Dashboard userEmail={userEmail} />} />
+<Route path="/hunt" element={<Dashboard userEmail={userEmail} />} />
             
             {/* Hunt System Routes */}
             <Route path="/hunt" element={<Dashboard userEmail={userEmail} />} />
