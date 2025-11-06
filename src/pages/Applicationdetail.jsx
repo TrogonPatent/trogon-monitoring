@@ -12,13 +12,6 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import ApplicationDetail from './pages/ApplicationDetail';
-// In your Routes:
-<Routes>
-  <Route path="/" element={<Dashboard />} />
-  <Route path="/provisional/new" element={<NewProvisionalPage />} />
-  <Route path="/application/:id" element={<ApplicationDetail />} />  {/* ADD THIS */}
-</Routes>
 
 export default function ApplicationDetail() {
   const { id } = useParams();
