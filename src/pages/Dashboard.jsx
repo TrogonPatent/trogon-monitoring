@@ -101,7 +101,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">trogon hunt</h1>
-              <p className="text-gray-600 mt-1">Patent Prior Art Search</p>
+              <p className="text-gray-600 mt-1">Prior Art Search</p>
             </div>
             <button
               onClick={() => navigate('/provisional/new')}
