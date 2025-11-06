@@ -2,6 +2,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AuthGate from './pages/AuthGate';
 import Dashboard from './pages/Dashboard';
 import NewProvisionalPage from './pages/NewProvisionalPage';
+import ApplicationDetail from './pages/ApplicationDetail';
+// In your Routes:
+<Routes>
+  <Route path="/" element={<Dashboard />} />
+  <Route path="/provisional/new" element={<NewProvisionalPage />} />
+  <Route path="/application/:id" element={<ApplicationDetail />} />  {/* ADD THIS */}
+</Routes>
 
 /**
  * Router Configuration for Trogon Monitoring System
