@@ -1,27 +1,23 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AuthGate from './pages/AuthGate';
-import MonitoringLanding from './components/MonitoringLanding';
 import Dashboard from './pages/Dashboard';
 import NewProvisionalPage from './pages/NewProvisionalPage';
-import Submarine from './components/Submarine';
 
 /**
  * Router Configuration for Trogon Monitoring System
  * 
- * ALL ROUTES are protected by AuthGate
- * Only brad@trogonpatent.ai and laura@trogonpatent.ai can access
+ * SIMPLIFIED ROUTING: Auth → Hunt Dashboard (direct)
  * 
- * Flow:
- * 1. AuthGate authenticates user
- * 2. Landing page shows Hunt/Submarine buttons
- * 3. /hunt → Dashboard + Hunt system routes
- * 4. /submarine → Submarine monitoring dashboard
+ * Rationale:
+ * - Submarine not functional until Phase F (Jan 2026)
+ * - Landing page adds unnecessary friction during development
+ * - Only 2 users (Brad/Laura) who know what they're working on
+ * - Can add landing page back when Submarine is ready
  * 
  * Routes:
- * - / → Landing page (choose Hunt or Submarine)
- * - /hunt → Hunt dashboard
+ * - / → Hunt dashboard (direct after auth)
+ * - /hunt → Hunt dashboard (alias)
  * - /hunt/provisional/new → Upload new provisional (Phase A)
- * - /submarine → Submarine monitoring dashboard
  * 
  * Future Phase Routes (add as you build):
  * - /hunt/provisional/:id → Application details
@@ -29,6 +25,9 @@ import Submarine from './components/Submarine';
  * - /hunt/provisional/:id/classify → Phase C: Classification validation
  * - /hunt/provisional/:id/threshold → Phase F: Threshold selection
  * - /hunt/provisional/:id/monitoring → Phase G: Monitoring dashboard
+ * 
+ * Note: Landing page and Submarine routes removed temporarily.
+ * Will be re-added when Submarine is functional (Phase F complete).
  */
 function App() {
   return (
@@ -36,16 +35,12 @@ function App() {
       <AuthGate>
         {(userEmail) => (
           <Routes>
-            {/* Landing page - choose Hunt or Submarine */}
+            {/* Root goes directly to Hunt dashboard */}
             <Route path="/" element={<Dashboard userEmail={userEmail} />} />
-<Route path="/hunt" element={<Dashboard userEmail={userEmail} />} />
             
             {/* Hunt System Routes */}
             <Route path="/hunt" element={<Dashboard userEmail={userEmail} />} />
             <Route path="/hunt/provisional/new" element={<NewProvisionalPage userEmail={userEmail} />} />
-            
-            {/* Submarine System Route */}
-            <Route path="/submarine" element={<Submarine userEmail={userEmail} />} />
             
             {/* Future Hunt routes - uncomment as you build them */}
             {/* <Route path="/hunt/provisional/:id" element={<ApplicationDetails userEmail={userEmail} />} /> */}
@@ -74,7 +69,7 @@ function NotFound() {
           href="/"
           className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors inline-block"
         >
-          Go to Home
+          Go to Dashboard
         </a>
       </div>
     </div>
