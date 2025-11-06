@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, AlertCircle, Binoculars } from 'lucide-react';
+import { Mail, AlertCircle } from 'lucide-react';
 
 /**
  * AuthGate - Authentication Gateway for Hunt System
@@ -41,10 +41,14 @@ export default function AuthGate({ children }) {
         <div className="max-w-md w-full">
           <div className="bg-white rounded-lg shadow-2xl p-8">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                <Binoculars className="w-8 h-8 text-blue-600" />
+              <div className="inline-flex items-center justify-center w-24 h-24 mb-4">
+                <img 
+                  src="/binoculars-icon.png" 
+                  alt="Binoculars" 
+                  className="w-full h-full object-contain"
+                />
               </div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Trogon Hunt</h1>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">trogon Hunt</h1>
               <p className="text-slate-600">Prior Art Search</p>
             </div>
 
@@ -81,17 +85,8 @@ export default function AuthGate({ children }) {
                 onClick={handleAuth}
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
-                Access Hunt System
+                Access
               </button>
-            </div>
-
-            <div className="mt-6 pt-6 border-t border-slate-200">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-900 mb-2">Hunt System</h3>
-                <ul className="text-xs text-blue-800 space-y-1">
-                  <li>🔍 <strong>Hunt:</strong> POD-based prior art search (Phase A-C)</li>
-                </ul>
-              </div>
             </div>
           </div>
         </div>
