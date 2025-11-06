@@ -69,7 +69,7 @@ export default function Dashboard({ userEmail }) {
 
           {/* Empty State */}
           <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-40 h-40 mb-6">
+            <div className="inline-flex items-center justify-center w-64 h-64 mb-6">
               <img 
                 src="/binoculars-icon.png" 
                 alt="Binoculars" 
@@ -84,7 +84,7 @@ export default function Dashboard({ userEmail }) {
               onClick={() => navigate('/hunt/provisional/new')}
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-8 h-8" />
               Upload Provisional Patent
             </button>
           </div>
