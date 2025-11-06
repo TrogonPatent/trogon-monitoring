@@ -15,21 +15,49 @@ export default async function handler(req, res) {
   const sql = neon(process.env.DATABASE_URL);
 
   try {
-    // Get all applications with key details
-    const applications = await sql`
-      SELECT 
-        id,
-        title,
-        filing_date,
-        publication_deadline,
-        is_provisional,
-        predicted_primary_cpc,
-        technology_area,
-        created_at,
-        updated_at
-      FROM applications
-      ORDER BY created_at DESC
-    `;
+    // Get query parameter for showing archived (admin only)
+    const showArchived = req.query?.showArchived === 'true';
+
+    // Get all applications (filter archived unless requested)
+    let applications;
+    
+    if (showArchived) {
+      // Admin view: show everything
+      applications = await sql`
+        SELECT 
+          id,
+          title,
+          filing_date,
+          publication_deadline,
+          is_provisional,
+          predicted_primary_cpc,
+          technology_area,
+          archived,
+          archived_at,
+          archived_by,
+          created_at,
+          updated_at
+        FROM applications
+        ORDER BY created_at DESC
+      `;
+    } else {
+      // User view: hide archived
+      applications = await sql`
+        SELECT 
+          id,
+          title,
+          filing_date,
+          publication_deadline,
+          is_provisional,
+          predicted_primary_cpc,
+          technology_area,
+          created_at,
+          updated_at
+        FROM applications
+        WHERE archived = false OR archived IS NULL
+        ORDER BY created_at DESC
+      `;
+    }
 
     // For each application, get POD count
     const applicationsWithPods = await Promise.all(
