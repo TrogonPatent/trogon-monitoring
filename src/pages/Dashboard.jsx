@@ -42,7 +42,7 @@ export default function Dashboard({ userEmail }) {
               
               {/* Centered Title - COMPACT */}
               <div className="flex-1 text-center">
-                <h1 className="text-2xl font-bold text-slate-900 mb-1">trogon Hunt Dashboard</h1>
+                <h1 className="text-2xl font-bold text-slate-900 mb-1">trogon hunt dashboard</h1>
                 <p className="text-sm text-slate-600">Prior Art Search & Classification Validation</p>
               </div>
               
