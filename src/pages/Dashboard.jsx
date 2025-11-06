@@ -1,6 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Search, FileText, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, FileText, LogOut } from 'lucide-react';
 
 /**
  * Hunt Dashboard - Main landing page for Hunt system
@@ -10,8 +10,6 @@ import { Plus, Search, FileText, LogOut } from 'lucide-react';
  * Shows list of all provisional applications and their current phase status
  */
 export default function Dashboard({ userEmail }) {
-  const navigate = useNavigate();
-
   const handleLogout = () => {
     // Clear any session storage
     sessionStorage.clear();
@@ -70,7 +68,7 @@ export default function Dashboard({ userEmail }) {
 
           {/* Empty State - VERY COMPACT */}
           <div className="text-center py-4">
-            {/* Smaller binoculars - 120px (was 256px) */}
+            {/* Smaller binoculars - 120px */}
             <div className="inline-flex items-center justify-center w-30 h-30 mb-3">
               <img 
                 src="/binoculars-icon.png" 
@@ -81,34 +79,35 @@ export default function Dashboard({ userEmail }) {
             </div>
             <h2 className="text-xl font-bold text-slate-900 mb-2">No Provisional Applications Yet</h2>
             <p className="text-sm text-slate-600 mb-4 max-w-lg mx-auto">
-              Upload your first provisional patent to begin Points of Distinction ("PODs") extraction, prior art search, and classification validation
+              Click Step 1 below to upload your first provisional patent and begin POD extraction, prior art search, and classification validation
             </p>
-            <button
-              onClick={() => navigate('/hunt/provisional/new')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Upload Provisional Patent
-            </button>
           </div>
 
           {/* Step Overview - COMPACT */}
           <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Step 1 Card - COMPACT */}
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            {/* Step 1 Card - CLICKABLE */}
+            <Link 
+              to="/provisional/new"
+              className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer group"
+            >
               <div className="flex items-center gap-2 mb-2">
-                <div className="bg-blue-100 p-1.5 rounded-lg">
+                <div className="bg-blue-100 p-1.5 rounded-lg group-hover:bg-blue-200 transition-colors">
                   <FileText className="w-4 h-4 text-blue-600" />
                 </div>
-                <h3 className="font-bold text-slate-900 text-sm">Step 1: Upload</h3>
+                <h3 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
+                  Step 1: Upload Provisional Patent
+                </h3>
               </div>
               <p className="text-xs text-slate-600">
-                Upload Provisional Patent Data, extract PODs, get CPC predictions
+                Upload specification, extract PODs, get CPC predictions
               </p>
-            </div>
+              <div className="mt-2 text-xs text-blue-600 font-medium group-hover:underline">
+                Click to begin →
+              </div>
+            </Link>
 
-            {/* Step 2 Card - COMPACT */}
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            {/* Step 2 Card - INFORMATIONAL */}
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 opacity-60">
               <div className="flex items-center gap-2 mb-2">
                 <div className="bg-emerald-100 p-1.5 rounded-lg">
                   <Search className="w-4 h-4 text-emerald-600" />
@@ -120,8 +119,8 @@ export default function Dashboard({ userEmail }) {
               </p>
             </div>
 
-            {/* Step 3 Card - COMPACT */}
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            {/* Step 3 Card - INFORMATIONAL */}
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 opacity-60">
               <div className="flex items-center gap-2 mb-2">
                 <div className="bg-purple-100 p-1.5 rounded-lg">
                   <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
