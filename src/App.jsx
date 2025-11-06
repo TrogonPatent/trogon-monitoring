@@ -1,11 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import AuthGate from './pages/AuthGate';
 import Dashboard from './pages/Dashboard';
 import NewProvisionalPage from './pages/NewProvisionalPage';
 
 /**
- * Router Configuration for Trogon Submarine
+ * Router Configuration for Trogon Monitoring System
  * 
- * Phase A Routes:
+ * ALL ROUTES are protected by AuthGate
+ * Only brad@trogonpatent.ai and laura@trogonpatent.ai can access
+ * 
+ * Routes:
  * - / → Dashboard (default)
  * - /dashboard → Dashboard
  * - /provisional/new → Upload new provisional
@@ -21,26 +25,28 @@ import NewProvisionalPage from './pages/NewProvisionalPage';
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Default route */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        
-        {/* Dashboard */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        
-        {/* Provisional routes */}
-        <Route path="/provisional/new" element={<NewProvisionalPage />} />
-        
-        {/* Future routes - uncomment as you build them */}
-        {/* <Route path="/provisional/:id" element={<ApplicationDetails />} /> */}
-        {/* <Route path="/provisional/:id/search" element={<PodSearch />} /> */}
-        {/* <Route path="/provisional/:id/classify" element={<ClassificationValidation />} /> */}
-        {/* <Route path="/provisional/:id/threshold" element={<ThresholdSelection />} /> */}
-        {/* <Route path="/provisional/:id/monitoring" element={<MonitoringDashboard />} /> */}
-        
-        {/* 404 catch-all */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <AuthGate>
+        <Routes>
+          {/* Default route */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          
+          {/* Dashboard */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          
+          {/* Provisional routes */}
+          <Route path="/provisional/new" element={<NewProvisionalPage />} />
+          
+          {/* Future routes - uncomment as you build them */}
+          {/* <Route path="/provisional/:id" element={<ApplicationDetails />} /> */}
+          {/* <Route path="/provisional/:id/search" element={<PodSearch />} /> */}
+          {/* <Route path="/provisional/:id/classify" element={<ClassificationValidation />} /> */}
+          {/* <Route path="/provisional/:id/threshold" element={<ThresholdSelection />} /> */}
+          {/* <Route path="/provisional/:id/monitoring" element={<MonitoringDashboard />} /> */}
+          
+          {/* 404 catch-all */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AuthGate>
     </BrowserRouter>
   );
 }
