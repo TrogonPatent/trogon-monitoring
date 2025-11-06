@@ -3,28 +3,28 @@ import { useState } from 'react';
 /**
  * Phase A: Provisional Upload & Classification
  * 
- * User Flow:
- * 1. Upload provisional spec (PDF or text)
- * 2. Extract text from file
- * 3. Call USPTO classifier to predict CPC codes
- * 4. Extract PODs using Claude API
- * 5. User reviews/approves PODs
- * 6. Save to database
+ * Simplified User Flow:
+ * 1. Upload provisional spec (PDF or text) - auto-extract title
+ * 2. Optionally enter filing date (may be pre-filing)
+ * 3. Extract text, classify, extract PODs
+ * 4. User reviews/approves PODs
+ * 5. Save to database
  */
 
 export default function ProvisionalUpload() {
   // Form state
-  const [title, setTitle] = useState('');
   const [filingDate, setFilingDate] = useState('');
   const [file, setFile] = useState(null);
-  const [specText, setSpecText] = useState('');
+  const [isPreFiling, setIsPreFiling] = useState(true); // Default to pre-filing
   
   // Processing state
   const [step, setStep] = useState('upload'); // upload | processing | classification | pods | review | complete
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   
-  // Results state
+  // Results state - populated during processing
+  const [title, setTitle] = useState(''); // Auto-generated from file
+  const [specText, setSpecText] = useState('');
   const [cpcPredictions, setCpcPredictions] = useState([]);
   const [primaryCpc, setPrimaryCpc] = useState('');
   const [technologyArea, setTechnologyArea] = useState('');
@@ -51,21 +51,10 @@ export default function ProvisionalUpload() {
     setError(null);
   };
 
-  // Handle text paste (alternative to file upload)
-  const handleTextPaste = (e) => {
-    setSpecText(e.target.value);
-    setError(null);
-  };
-
   // Step 1: Upload and extract text
   const handleUpload = async () => {
-    if (!title || !filingDate) {
-      setError('Please provide title and filing date');
-      return;
-    }
-
-    if (!file && !specText) {
-      setError('Please upload a file or paste specification text');
+    if (!file) {
+      setError('Please upload a provisional patent file');
       return;
     }
 
@@ -74,27 +63,36 @@ export default function ProvisionalUpload() {
     setStep('processing');
 
     try {
-      // TODO: Implement actual file upload and text extraction
-      // For now, use mock data for testing UI
-      
-      if (file) {
-        // Extract text from PDF or read text file
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('title', title);
-        formData.append('filingDate', filingDate);
+      // Upload file and extract text
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('filingDate', filingDate || ''); // Empty if pre-filing
+      formData.append('isPreFiling', isPreFiling);
 
-        // TODO: Replace with actual API call
-        // const response = await fetch('/api/upload-provisional', {
-        //   method: 'POST',
-        //   body: formData
-        // });
-        // const data = await response.json();
-        
-        // Mock extracted text
-        const mockExtractedText = specText || "A system and method for mobile patent filing using AI-powered document generation with multi-modal input processing...";
-        setSpecText(mockExtractedText);
+      const response = await fetch('/api/upload-provisional', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
       }
+      
+      const data = await response.json();
+      
+      // Set extracted data
+      setSpecText(data.extractedText || '');
+      setTitle(data.title); // Auto-generated from API
+      setApplicationId(data.id);
+      
+      console.log('Upload successful:', {
+        id: data.id,
+        title: data.title,
+        textLength: data.textLength,
+        filingDate: data.filingDate,
+        isPreFiling: data.isPreFiling
+      });
 
       // Move to classification step
       setTimeout(() => {
@@ -270,8 +268,10 @@ export default function ProvisionalUpload() {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify({
+      //     applicationId,
       //     title,
       //     filingDate,
+      //     isPreFiling,
       //     specText,
       //     cpcPredictions,
       //     primaryCpc,
@@ -280,11 +280,8 @@ export default function ProvisionalUpload() {
       //   })
       // });
       // const data = await response.json();
-      // setApplicationId(data.applicationId);
 
-      // Mock successful save
-      const mockAppId = 'mock-uuid-' + Date.now();
-      setApplicationId(mockAppId);
+      // Mock successful save (already have applicationId from upload)
       setStep('complete');
       setIsProcessing(false);
 
@@ -296,7 +293,7 @@ export default function ProvisionalUpload() {
 
   // Calculate publication deadline
   const calculatePublicationDeadline = (filingDate) => {
-    if (!filingDate) return '';
+    if (!filingDate) return 'N/A (Pre-filing)';
     const date = new Date(filingDate);
     date.setMonth(date.getMonth() + 18);
     return date.toISOString().split('T')[0];
@@ -352,41 +349,12 @@ export default function ProvisionalUpload() {
       {/* Step 1: Upload Form */}
       {step === 'upload' && (
         <div className="space-y-6">
+          {/* File Upload */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              Application Title *
+              Upload Provisional Patent Data
             </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Mobile Patent Filing System"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Filing Date *
-            </label>
-            <input
-              type="date"
-              value={filingDate}
-              onChange={(e) => setFilingDate(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            {filingDate && (
-              <p className="text-sm text-gray-600 mt-1">
-                Publication deadline: {calculatePublicationDeadline(filingDate)}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Upload Specification *
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
               <input
                 type="file"
                 accept=".pdf,.txt"
@@ -399,33 +367,79 @@ export default function ProvisionalUpload() {
                   <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 font-medium">
                     {file ? file.name : 'Click to upload PDF or text file'}
                   </p>
                   <p className="text-xs text-gray-500">
                     PDF or TXT up to 10MB
                   </p>
+                  {file && (
+                    <p className="text-xs text-blue-600 font-medium">
+                      ✓ File selected
+                    </p>
+                  )}
                 </div>
               </label>
             </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Title will be auto-generated from file content
+            </p>
           </div>
 
+          {/* Filing Date (Optional) */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              Or Paste Specification Text
+              Filing Date <span className="text-gray-400 font-normal">(optional)</span>
             </label>
-            <textarea
-              value={specText}
-              onChange={handleTextPaste}
-              placeholder="Paste your provisional specification text here..."
-              rows={8}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-            />
+            
+            {/* Pre-filing checkbox */}
+            <div className="mb-3">
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPreFiling}
+                  onChange={(e) => {
+                    setIsPreFiling(e.target.checked);
+                    if (e.target.checked) {
+                      setFilingDate(''); // Clear date if switching to pre-filing
+                    }
+                  }}
+                  className="h-4 w-4 text-blue-600 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700">
+                  This is pre-filing (not yet filed with USPTO)
+                </span>
+              </label>
+            </div>
+
+            {!isPreFiling && (
+              <div>
+                <input
+                  type="date"
+                  value={filingDate}
+                  onChange={(e) => setFilingDate(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {filingDate && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Publication deadline: {calculatePublicationDeadline(filingDate)}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {isPreFiling && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-700">
+                  Pre-filing mode: No publication deadline tracking yet
+                </p>
+              </div>
+            )}
           </div>
 
           <button
             onClick={handleUpload}
-            disabled={isProcessing}
+            disabled={isProcessing || !file}
             className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
             {isProcessing ? 'Processing...' : 'Begin Classification'}
@@ -453,6 +467,17 @@ export default function ProvisionalUpload() {
       {/* Step 4: Review PODs */}
       {step === 'review' && (
         <div className="space-y-6">
+          {/* Application Info */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h3 className="font-semibold mb-2">Application Details</h3>
+            <p className="text-sm mb-1">
+              <span className="font-medium">Title:</span> {title}
+            </p>
+            <p className="text-sm">
+              <span className="font-medium">Status:</span> {isPreFiling ? 'Pre-filing' : `Filed: ${filingDate}`}
+            </p>
+          </div>
+
           {/* Classification Results */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="font-semibold mb-2">Classification Results</h3>
@@ -557,7 +582,11 @@ export default function ProvisionalUpload() {
           {/* Action buttons */}
           <div className="flex gap-4">
             <button
-              onClick={() => setStep('upload')}
+              onClick={() => {
+                setStep('upload');
+                setFile(null);
+                setError(null);
+              }}
               className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
             >
               Start Over
@@ -588,8 +617,14 @@ export default function ProvisionalUpload() {
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
             <p className="text-sm text-gray-600 mb-2">Application Details:</p>
             <p className="font-medium">{title}</p>
-            <p className="text-sm text-gray-600">Filed: {filingDate}</p>
-            <p className="text-sm text-gray-600">Publication: {calculatePublicationDeadline(filingDate)}</p>
+            <p className="text-sm text-gray-600">
+              {isPreFiling ? 'Pre-filing' : `Filed: ${filingDate}`}
+            </p>
+            {!isPreFiling && (
+              <p className="text-sm text-gray-600">
+                Publication: {calculatePublicationDeadline(filingDate)}
+              </p>
+            )}
             <p className="text-sm text-gray-600 mt-2">PODs Approved: {approvedPods.length}</p>
             <p className="text-xs text-gray-500 mt-2 font-mono">ID: {applicationId}</p>
           </div>
@@ -605,6 +640,7 @@ export default function ProvisionalUpload() {
                 setSuggestedPods([]);
                 setApprovedPods([]);
                 setApplicationId(null);
+                setIsPreFiling(true);
               }}
               className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
             >
@@ -622,27 +658,6 @@ export default function ProvisionalUpload() {
           </div>
         </div>
       )}
-
-      {/* Development Notes */}
-      <div className="mt-12 pt-6 border-t border-gray-200">
-        <details className="text-sm text-gray-600">
-          <summary className="cursor-pointer font-medium text-gray-800 mb-2">
-            Development Notes (Remove in production)
-          </summary>
-          <div className="space-y-2 pl-4">
-            <p>✅ UI Flow Complete: Upload → Classify → Extract PODs → Review → Save</p>
-            <p>⏳ TODO: Wire up actual API endpoints:</p>
-            <ul className="list-disc pl-6 space-y-1">
-              <li>/api/upload-provisional - Handle file upload & text extraction</li>
-              <li>/api/classify-provisional - Call USPTO classifier (or Claude fallback)</li>
-              <li>/api/extract-pods - Use Claude to extract PODs from spec</li>
-              <li>/api/save-provisional - Save to database with PODs</li>
-            </ul>
-            <p>📊 Current State: Using mock data for UI testing</p>
-            <p>🎯 Next: Build backend endpoints to replace mock data</p>
-          </div>
-        </details>
-      </div>
     </div>
   );
 }
