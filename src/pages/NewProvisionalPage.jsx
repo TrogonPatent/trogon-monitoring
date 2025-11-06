@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function ProvisionalUpload() {
   const navigate = useNavigate();
+  
   // Form state
   const [filingDate, setFilingDate] = useState('');
   const [file, setFile] = useState(null);
@@ -301,7 +302,7 @@ export default function ProvisionalUpload() {
     return date.toISOString().split('T')[0];
   };
 
-return (
+  return (
     <div className="min-h-screen bg-gray-50">
       {/* Back to Dashboard Navigation */}
       <div className="bg-white border-b border-gray-200">
@@ -316,14 +317,13 @@ return (
             <span className="font-medium">Back to Dashboard</span>
           </button>
         </div>
-      </div>>
       </div>
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto p-6">
         <h1 className="text-3xl font-bold mb-2">Upload Provisional Patent Application</h1>
         <p className="text-gray-600 mb-6">
-          Phase A: Upload your provisional specification to begin monitoring
+          Upload your provisional patent data
         </p>
 
         {/* Progress indicator */}
@@ -668,12 +668,12 @@ return (
               </button>
               <button
                 onClick={() => {
-                  // TODO: Navigate to Phase B (POD-based search)
-                  console.log('Navigate to POD search for application:', applicationId);
+                  // Navigate back to dashboard
+                  navigate('/');
                 }}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
-                Continue to Search →
+                Back to Dashboard
               </button>
             </div>
           </div>
