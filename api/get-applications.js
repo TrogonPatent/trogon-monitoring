@@ -1,11 +1,7 @@
 /**
- * Get Application Details
+ * Get Applications - Fetch all provisional applications with POD counts
  * 
- * Fetches a single application with all related data:
- * - Application metadata
- * - CPC predictions
- * - PODs with rationale
- * - File information
+ * Returns applications sorted by most recent first
  */
 
 import { neon } from '@neondatabase/serverless';
@@ -19,117 +15,113 @@ export default async function handler(req, res) {
   const sql = neon(process.env.DATABASE_URL);
 
   try {
-    const { id } = req.query;
+    // Get query parameter for showing archived (admin only)
+    const showArchived = req.query && req.query.showArchived === 'true';
 
-    if (!id) {
-      return res.status(400).json({ error: 'Missing application ID' });
+    // Get all applications (filter archived unless requested)
+    let applications;
+    
+    // First, check if archived column exists
+    let hasArchivedColumn = true;
+    try {
+      await sql`SELECT archived FROM applications LIMIT 1`;
+    } catch (e) {
+      hasArchivedColumn = false;
+      console.log('Archived column does not exist yet');
     }
 
-    // Get application details
-    const applications = await sql`
-      SELECT 
-        id,
-        title,
-        filing_date,
-        publication_deadline,
-        is_provisional,
-        specification_text,
-        file_url,
-        file_name,
-        classifier_predictions,
-        predicted_primary_cpc,
-        technology_area,
-        created_at,
-        updated_at,
-        archived
-      FROM applications
-      WHERE id = ${id}
-    `;
-
-    if (applications.length === 0) {
-      return res.status(404).json({ error: 'Application not found' });
+    if (!hasArchivedColumn || showArchived) {
+      // If no archived column or admin wants all, get everything
+      applications = await sql`
+        SELECT 
+          id,
+          title,
+          filing_date,
+          publication_deadline,
+          is_provisional,
+          predicted_primary_cpc,
+          technology_area,
+          created_at,
+          updated_at
+        FROM applications
+        ORDER BY created_at DESC
+      `;
+    } else {
+      // User view: hide archived
+      applications = await sql`
+        SELECT 
+          id,
+          title,
+          filing_date,
+          publication_deadline,
+          is_provisional,
+          predicted_primary_cpc,
+          technology_area,
+          created_at,
+          updated_at
+        FROM applications
+        WHERE archived = false OR archived IS NULL
+        ORDER BY created_at DESC
+      `;
     }
 
-    const application = applications[0];
+    // For each application, get POD count
+    const applicationsWithPods = await Promise.all(
+      applications.map(async (app) => {
+        const podCount = await sql`
+          SELECT COUNT(*) as count
+          FROM pod_definitions
+          WHERE application_id = ${app.id}
+        `;
 
-    // Get PODs for this application
-    const pods = await sql`
-      SELECT 
-        id,
-        pod_text,
-        pod_rationale,
-        is_primary,
-        suggested_by_system,
-        user_approved,
-        display_order,
-        created_at
-      FROM pod_definitions
-      WHERE application_id = ${id}
-      ORDER BY display_order, created_at
-    `;
+        const primaryPodCount = await sql`
+          SELECT COUNT(*) as count
+          FROM pod_definitions
+          WHERE application_id = ${app.id}
+            AND is_primary = true
+        `;
 
-    // Parse CPC predictions if stored as JSON string
-    let cpcPredictions = [];
-    if (application.classifier_predictions) {
-      try {
-        cpcPredictions = typeof application.classifier_predictions === 'string'
-          ? JSON.parse(application.classifier_predictions)
-          : application.classifier_predictions;
-      } catch (e) {
-        console.error('Error parsing CPC predictions:', e);
-      }
-    }
+        return {
+          ...app,
+          podCount: parseInt(podCount[0].count),
+          primaryPodCount: parseInt(primaryPodCount[0].count),
+          isPreFiling: app.is_provisional && !app.filing_date,
+          daysUntilPublication: app.publication_deadline 
+            ? calculateDaysUntil(app.publication_deadline)
+            : null
+        };
+      })
+    );
 
-    // Calculate days until publication
-    let daysUntilPublication = null;
-    if (application.publication_deadline) {
-      const deadline = new Date(application.publication_deadline);
-      const today = new Date();
-      const diffTime = deadline - today;
-      daysUntilPublication = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    }
-
-    console.log(`Fetched application ${id}:`, {
-      title: application.title,
-      podCount: pods.length,
-      cpcCount: cpcPredictions.length
-    });
+    console.log(`Fetched ${applicationsWithPods.length} applications`);
 
     return res.status(200).json({
       success: true,
-      application: {
-        ...application,
-        cpcPredictions,
-        isPreFiling: application.is_provisional && !application.filing_date,
-        daysUntilPublication,
-        specLength: application.specification_text?.length || 0
-      },
-      pods: pods.map(pod => ({
-        id: pod.id,
-        text: pod.pod_text,
-        rationale: pod.pod_rationale,
-        isPrimary: pod.is_primary,
-        suggestedBySystem: pod.suggested_by_system,
-        userApproved: pod.user_approved,
-        displayOrder: pod.display_order,
-        createdAt: pod.created_at
-      })),
-      summary: {
-        podCount: pods.length,
-        primaryPodCount: pods.filter(p => p.is_primary).length,
-        cpcCount: cpcPredictions.length,
-        hasSpecification: !!application.specification_text,
-        hasFile: !!application.file_url
-      }
+      applications: applicationsWithPods,
+      count: applicationsWithPods.length
     });
 
   } catch (error) {
-    console.error('Error fetching application details:', error.message);
+    console.error('Error fetching applications:', error.message);
     console.error('Stack:', error.stack);
     
     return res.status(500).json({
-      error: 'Failed to fetch application details',
+      error: 'Failed to fetch applications',
       message: error.message
     });
   }
+}
+
+/**
+ * Calculate days until a future date
+ */
+function calculateDaysUntil(dateString) {
+  if (!dateString) return null;
+  
+  const targetDate = new Date(dateString);
+  const today = new Date();
+  const diffTime = targetDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
 }
