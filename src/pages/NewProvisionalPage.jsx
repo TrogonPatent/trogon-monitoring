@@ -85,21 +85,25 @@ export default function ProvisionalUpload() {
       const data = await response.json();
       
       // Set extracted data
-      setSpecText(data.extractedText || '');
-      setTitle(data.title); // Auto-generated from API
-      setApplicationId(data.id);
+      const extractedText = data.extractedText || '';
+      const extractedTitle = data.title;
+      const appId = data.id;
+      
+      setSpecText(extractedText);
+      setTitle(extractedTitle);
+      setApplicationId(appId);
       
       console.log('Upload successful:', {
-        id: data.id,
-        title: data.title,
-        textLength: data.textLength,
+        id: appId,
+        title: extractedTitle,
+        textLength: extractedText.length,
         filingDate: data.filingDate,
         isPreFiling: data.isPreFiling
       });
 
-      // Move to classification step
+      // Move to classification step - pass data directly
       setTimeout(() => {
-        handleClassification();
+        handleClassification(extractedText, extractedTitle, appId);
       }, 1000);
 
     } catch (err) {
@@ -110,8 +114,13 @@ export default function ProvisionalUpload() {
   };
 
   // Step 2 & 3 Combined: Call Classification API (gets both CPC + PODs)
-  const handleClassification = async () => {
+  const handleClassification = async (textToClassify, titleToUse, appId) => {
     setStep('classification');
+
+    // Use passed parameters or fall back to state (for retry scenarios)
+    const specTextToUse = textToClassify || specText;
+    const titleToUseActual = titleToUse || title;
+    const applicationIdToUse = appId || applicationId;
 
     try {
       // Call our combined classify-provisional API
@@ -119,9 +128,9 @@ export default function ProvisionalUpload() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          specText, 
-          title,
-          applicationId 
+          specText: specTextToUse, 
+          title: titleToUseActual,
+          applicationId: applicationIdToUse 
         })
       });
 
