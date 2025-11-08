@@ -8,14 +8,6 @@
 import { put } from '@vercel/blob';
 import { neon } from '@neondatabase/serverless';
 
-// For PDF text extraction
-let pdfParse;
-try {
-  pdfParse = require('pdf-parse');
-} catch (e) {
-  console.warn('pdf-parse not installed');
-}
-
 // Simpler: Use default body parser with size limit
 export const config = {
   api: {
@@ -34,14 +26,15 @@ async function extractText(buffer, mimetype, filename) {
   
   // PDF file - use pdf-parse
   if (mimetype === 'application/pdf' || filename.endsWith('.pdf')) {
-    if (!pdfParse) {
-      throw new Error('PDF parsing not available. Install pdf-parse package.');
-    }
-    
     try {
+      // Require inside function for Vercel serverless compatibility
+      const pdfParse = require('pdf-parse');
       const data = await pdfParse(buffer);
       return data.text;
     } catch (error) {
+      if (error.code === 'MODULE_NOT_FOUND') {
+        throw new Error('PDF parsing package not installed');
+      }
       throw new Error(`Failed to extract text from PDF: ${error.message}`);
     }
   }
