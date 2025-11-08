@@ -154,6 +154,11 @@ class USPTOParser:
                 # Parse this individual patent
                 root = etree.fromstring(xml_doc)
                 
+                # In 2025 format, root IS the us-patent-grant element
+                # Check if root tag is correct
+                if 'us-patent-grant' not in root.tag:
+                    continue
+                
                 patent = self.parse_patent_xml(root)
                 if patent:
                     patents.append(patent)
@@ -166,7 +171,8 @@ class USPTOParser:
             
             except Exception as e:
                 # Skip malformed patents
-                pass
+                if len(patents) == 0 and i < 5:  # Debug first few failures
+                    print(f"\nDebug error on patent {i}: {e}")
         
         return patents
     
