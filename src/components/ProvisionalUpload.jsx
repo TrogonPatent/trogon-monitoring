@@ -34,20 +34,25 @@ export default function ProvisionalUpload() {
   // Final application ID
   const [applicationId, setApplicationId] = useState(null);
 
-  // Handle file selection
+// Handle file selection
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length === 0) return;
 
-    const fileType = selectedFile.type;
-    const validTypes = ['application/pdf', 'text/plain'];
+    const validTypes = [
+      'application/pdf', 
+      'text/plain',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
     
-    if (!validTypes.includes(fileType)) {
-      setError('Please upload a PDF or text file');
+    // Validate all files
+    const invalidFiles = selectedFiles.filter(f => !validTypes.includes(f.type));
+    if (invalidFiles.length > 0) {
+      setError(`Invalid file type: ${invalidFiles[0].name}. Please upload PDF, TXT, or DOCX files only.`);
       return;
     }
 
-    setFile(selectedFile);
+    setFile(selectedFiles); // Now stores array of files
     setError(null);
   };
 
@@ -63,11 +68,20 @@ export default function ProvisionalUpload() {
     setStep('processing');
 
     try {
-      // Upload file and extract text
+// Upload file and extract text
       const formData = new FormData();
-      formData.append('file', file);
+      
+      // Append all files
+      if (Array.isArray(file)) {
+        file.forEach(f => formData.append('file', f));
+      } else {
+        formData.append('file', file);
+      }
+      
       formData.append('filingDate', filingDate || ''); // Empty if pre-filing
       formData.append('isPreFiling', isPreFiling);
+
+      const response = await fetch('/api/upload-provisional', {
 
       const response = await fetch('/api/upload-provisional', {
         method: 'POST',
@@ -351,13 +365,44 @@ export default function ProvisionalUpload() {
         <div className="space-y-6">
           {/* File Upload */}
           <div>
-            <label className="block text-sm font-medium mb-2">
+           <label className="block text-sm font-medium mb-2">
               Upload Provisional Patent Data
             </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+            <div 
+              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                
+                const droppedFiles = Array.from(e.dataTransfer.files);
+                const validTypes = [
+                  'application/pdf', 
+                  'text/plain',
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                ];
+                
+                const invalidFiles = droppedFiles.filter(f => !validTypes.includes(f.type));
+                if (invalidFiles.length > 0) {
+                  setError(`Invalid file type: ${invalidFiles[0].name}`);
+                  return;
+                }
+                
+                setFile(droppedFiles);
+                setError(null);
+              }}
+            >
               <input
                 type="file"
-                accept=".pdf,.txt"
+                accept=".pdf,.txt,.docx,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                multiple
                 onChange={handleFileChange}
                 className="hidden"
                 id="file-upload"
@@ -367,18 +412,24 @@ export default function ProvisionalUpload() {
                   <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <p className="text-sm text-gray-600 font-medium">
-                    {file ? file.name : 'Click to upload PDF or text file'}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    PDF or TXT up to 10MB
-                  </p>
-                  {file && (
-                    <p className="text-xs text-blue-600 font-medium">
-                      ✓ File selected
+<p className="text-sm text-gray-600 font-medium">
+                      {file ? (
+                        Array.isArray(file) ? `${file.length} files selected` : file.name
+                      ) : 'Click to upload or drag files here'}
                     </p>
-                  )}
-                </div>
+                    <p className="text-xs text-gray-500">
+                      PDF, DOCX, or TXT • Multiple files OK • 25MB total
+                    </p>
+                    {file && (
+                      <div className="text-xs text-blue-600 font-medium">
+                        ✓ {Array.isArray(file) ? (
+                          <ul className="mt-1 space-y-1 text-left max-w-xs mx-auto">
+                            {file.map((f, i) => <li key={i}>• {f.name}</li>)}
+                          </ul>
+                        ) : file.name}
+                      </div>
+                    )}
+                  </div>
               </label>
             </div>
             <p className="mt-2 text-xs text-gray-500">
