@@ -94,6 +94,16 @@ class TrogonUploader:
             # Step 3: Save to database
             time.sleep(0.5)
             
+            # Transform PODs to match save endpoint format
+            transformed_pods = []
+            for pod in classify_data.get('pods', []):
+                transformed_pods.append({
+                    'text': pod.get('pod_text', ''),
+                    'rationale': pod.get('rationale', ''),
+                    'isPrimary': pod.get('is_primary', False),
+                    'suggested': True
+                })
+            
             save_payload = {
                 'applicationId': application_id,
                 'title': upload_data.get('title', ''),
@@ -102,7 +112,7 @@ class TrogonUploader:
                 'cpcPredictions': classify_data.get('cpcPredictions', []),
                 'primaryCpc': classify_data.get('primaryCpc', ''),
                 'technologyArea': classify_data.get('technologyArea', ''),
-                'approvedPods': classify_data.get('pods', [])
+                'approvedPods': transformed_pods
             }
             
             response = requests.post(
