@@ -217,6 +217,10 @@ class USPTOParser:
             return None
         patent['number'] = f"US{doc_num.text.strip()}"
         
+        # Skip design patents (USD prefix)
+        if patent['number'].startswith('USD'):
+            return None
+        
         # Title
         title = elem.find('.//invention-title')
         if title is None or not title.text:
