@@ -143,6 +143,38 @@ class USPTOParser:
         
         print(f"Found {len(parts)-1} patent documents")
         
+        # Debug: Print structure of first patent
+        first_patent_xml = b'<?xml version="1.0" encoding="UTF-8"?>' + parts[1]
+        first_root = etree.fromstring(first_patent_xml)
+        print("\n=== FIRST PATENT XML STRUCTURE ===")
+        print(f"Root tag: {first_root.tag}")
+        for child in first_root[:5]:  # First 5 children
+            print(f"  Child: {child.tag}")
+            for subchild in child[:3]:  # First 3 grandchildren
+                print(f"    Grandchild: {subchild.tag}")
+        
+        # Check for CPC in different locations
+        cpc_locations = [
+            './/classification-cpc',
+            './/classifications-cpc',
+            './/cpc-classification',
+            './/main-classification',
+            './/classification-cpc-text'
+        ]
+        
+        print("\n=== SEARCHING FOR CPC CODES ===")
+        for loc in cpc_locations:
+            found = first_root.findall(loc)
+            if found:
+                print(f"✓ Found {len(found)} elements at: {loc}")
+                if found[0].text:
+                    print(f"  Text: {found[0].text}")
+            else:
+                print(f"✗ Not found: {loc}")
+        
+        print("=" * 50)
+        sys.exit(0)  # Stop here to review structure
+        
         for i, part in enumerate(parts[1:], 1):  # Skip first empty part
             if not part.strip():
                 continue
