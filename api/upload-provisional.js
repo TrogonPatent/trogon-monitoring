@@ -1,81 +1,82 @@
 /**
  * API Route: /api/upload-provisional
- * Phase A: Handle provisional patent upload
- * 
- * FIXED: Simplified form parsing with better error handling
+ * Phase A: Handle provisional patent upload (MULTIPLE FILES)
+ * Supports: .txt, .docx, .pdf
  */
 
 import { put } from '@vercel/blob';
 import { neon } from '@neondatabase/serverless';
 
-// Simpler: Use default body parser with size limit
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '10mb',
+      sizeLimit: '25mb', // Increased for multiple files
     },
   },
 };
 
 // Helper: Extract text from file
 async function extractText(buffer, mimetype, filename) {
-  // Text file - direct conversion
+  // Text file
   if (mimetype === 'text/plain' || filename.endsWith('.txt')) {
     return buffer.toString('utf-8');
   }
   
-  // PDF file - use pdf-parse
+  // DOCX file
+  if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || filename.endsWith('.docx')) {
+    try {
+      const mammoth = await import('mammoth');
+      const result = await mammoth.extractRawText({ buffer });
+      return result.value;
+    } catch (error) {
+      throw new Error(`Failed to extract text from DOCX: ${error.message}`);
+    }
+  }
+  
+  // PDF file
   if (mimetype === 'application/pdf' || filename.endsWith('.pdf')) {
     try {
-      // Dynamic import for Vercel serverless
       const pdfParse = await import('pdf-parse');
       const data = await pdfParse.default(buffer);
       return data.text;
     } catch (error) {
-      if (error.code === 'ERR_MODULE_NOT_FOUND') {
-        throw new Error('PDF parsing package not installed');
-      }
       throw new Error(`Failed to extract text from PDF: ${error.message}`);
     }
   }
   
-  throw new Error('Unsupported file type. Please upload PDF or TXT file.');
+  // If we can't extract text, return empty (e.g., for image PDFs)
+  console.warn(`Cannot extract text from ${filename} (${mimetype}), treating as attachment`);
+  return '';
 }
 
-// Helper: Calculate publication deadline (filing date + 18 months)
+// Helper: Calculate publication deadline
 function calculatePublicationDeadline(filingDate) {
   const date = new Date(filingDate);
   date.setMonth(date.getMonth() + 18);
   return date.toISOString().split('T')[0];
 }
 
-// Helper: Auto-generate title from filename or text
+// Helper: Generate title
 function generateTitle(filename, text) {
-  // Try to extract title from filename (remove extension)
-  let title = filename.replace(/\.(pdf|txt)$/i, '').replace(/[-_]/g, ' ');
+  let title = filename.replace(/\.(pdf|txt|docx)$/i, '').replace(/[-_]/g, ' ');
   
-  // If filename is generic, try to extract from first heading or first line
-  const genericNames = ['provisional', 'patent', 'spec', 'specification', 'application', 'document'];
+  const genericNames = ['provisional', 'patent', 'spec', 'specification', 'application', 'document', 'drawing'];
   const isGeneric = genericNames.some(name => title.toLowerCase().includes(name));
   
   if (isGeneric || title.length < 5) {
-    // Try to find first heading or title in text
     const lines = text.split('\n').filter(line => line.trim().length > 0);
     
-    for (const line of lines.slice(0, 10)) { // Check first 10 lines
+    for (const line of lines.slice(0, 10)) {
       const trimmed = line.trim();
       
-      // Skip common headers
       if (/^(background|summary|detailed|abstract|field|technical)/i.test(trimmed)) {
         continue;
       }
       
-      // Use first substantial line (10-100 chars)
       if (trimmed.length >= 10 && trimmed.length <= 100) {
         const isAllCaps = trimmed === trimmed.toUpperCase();
         const wordCount = trimmed.split(/\s+/).length;
         
-        // Use it if it's not all caps, or if all caps but reasonable length (3-10 words)
         if (!isAllCaps || (wordCount >= 3 && wordCount <= 10)) {
           title = trimmed;
           break;
@@ -84,14 +85,12 @@ function generateTitle(filename, text) {
     }
   }
   
-  // Capitalize and clean up
   title = title
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
-    .substring(0, 200); // Max 200 chars
+    .substring(0, 200);
   
-  // If still generic or empty, use default
   if (!title || title.length < 5) {
     title = 'Untitled Provisional Application';
   }
@@ -100,7 +99,6 @@ function generateTitle(filename, text) {
 }
 
 export default async function handler(req, res) {
-  // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -117,7 +115,7 @@ export default async function handler(req, res) {
     console.log('Upload request received');
     console.log('Content-Type:', req.headers['content-type']);
     
-    // For now, let's use a simpler approach - read raw body
+    // Read raw body
     const chunks = [];
     for await (const chunk of req) {
       chunks.push(chunk);
@@ -126,18 +124,18 @@ export default async function handler(req, res) {
     
     console.log('Raw body length:', rawBody.length);
     
-    // Parse multipart manually (simplified)
+    // Parse multipart
     const contentType = req.headers['content-type'] || '';
     const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/);
     
     if (!boundaryMatch) {
-      return res.status(400).json({ error: 'Invalid Content-Type. Expected multipart/form-data' });
+      return res.status(400).json({ error: 'Invalid Content-Type' });
     }
     
     const boundary = boundaryMatch[1] || boundaryMatch[2];
     const parts = rawBody.toString('binary').split(`--${boundary}`);
     
-    let file = null;
+    const files = []; // CHANGED: Collect ALL files
     let filingDate = '';
     let isPreFiling = 'true';
     
@@ -151,13 +149,10 @@ export default async function handler(req, res) {
       const headers = part.substring(0, headerEndIndex);
       const content = part.substring(headerEndIndex + 4);
       
-      // Extract field name
       const nameMatch = headers.match(/name="([^"]+)"/);
       if (!nameMatch) continue;
       
       const fieldName = nameMatch[1];
-      
-      // Check if it's a file
       const filenameMatch = headers.match(/filename="([^"]+)"/);
       
       if (filenameMatch) {
@@ -166,14 +161,13 @@ export default async function handler(req, res) {
         const mimeMatch = headers.match(/Content-Type:\s*([^\r\n]+)/);
         const mimetype = mimeMatch ? mimeMatch[1].trim() : 'application/octet-stream';
         
-        // Extract file content (remove trailing boundary markers)
         const fileContent = content.substring(0, content.lastIndexOf('\r\n'));
         const buffer = Buffer.from(fileContent, 'binary');
         
-        file = { filename, mimetype, buffer };
+        files.push({ filename, mimetype, buffer }); // CHANGED: Push to array
         console.log('File found:', filename, 'Size:', buffer.length, 'Type:', mimetype);
       } else {
-        // This is a text field
+        // Text field
         const value = content.substring(0, content.lastIndexOf('\r\n'));
         
         if (fieldName === 'filingDate') {
@@ -184,44 +178,58 @@ export default async function handler(req, res) {
       }
     }
     
-    // Validate we got a file
-    if (!file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+    // Validate we got at least one file
+    if (files.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
     }
     
-    console.log('Form data parsed:', { filingDate, isPreFiling, fileSize: file.buffer.length });
+    console.log(`Processing ${files.length} file(s)`);
     
-    // Validate file size (10MB limit)
-    if (file.buffer.length > 10 * 1024 * 1024) {
-      return res.status(400).json({ error: 'File size exceeds 10MB limit' });
+    // Extract text from ALL files and combine
+    const extractedTexts = [];
+    const fileUrls = [];
+    const fileNames = [];
+    
+    for (const file of files) {
+      console.log(`Extracting text from: ${file.filename}`);
+      
+      const text = await extractText(file.buffer, file.mimetype, file.filename);
+      
+      if (text && text.trim().length > 0) {
+        extractedTexts.push(`\n\n=== ${file.filename} ===\n\n${text}`);
+        console.log(`Extracted ${text.length} characters from ${file.filename}`);
+      } else {
+        console.log(`No text extracted from ${file.filename} (may be drawings/images)`);
+      }
+      
+      // Upload ALL files to Vercel Blob
+      console.log(`Uploading ${file.filename} to Vercel Blob...`);
+      const blob = await put(file.filename, file.buffer, {
+        access: 'public',
+        contentType: file.mimetype,
+      });
+      
+      fileUrls.push(blob.url);
+      fileNames.push(file.filename);
+      console.log(`Uploaded: ${blob.url}`);
     }
     
-    // Extract text from file
-    console.log('Extracting text from file:', file.filename);
-    const extractedText = await extractText(file.buffer, file.mimetype, file.filename);
+    // Combine all extracted text
+    const combinedText = extractedTexts.join('\n\n');
     
-    if (!extractedText || extractedText.trim().length < 100) {
+    if (!combinedText || combinedText.trim().length < 100) {
       return res.status(400).json({ 
-        error: 'Extracted text is too short. Please ensure the file contains a valid specification.' 
+        error: 'Extracted text is too short. Please ensure at least one file contains a valid specification.' 
       });
     }
     
-    console.log(`Extracted ${extractedText.length} characters from ${file.filename}`);
+    console.log(`Total extracted text: ${combinedText.length} characters from ${files.length} file(s)`);
     
-    // Auto-generate title from filename or first line of text
-    const autoTitle = generateTitle(file.filename, extractedText);
+    // Generate title from first text-containing file
+    const autoTitle = generateTitle(files[0].filename, combinedText);
     console.log('Generated title:', autoTitle);
     
-    // Store file in Vercel Blob
-    console.log('Uploading file to Vercel Blob...');
-    const blob = await put(file.filename, file.buffer, {
-      access: 'public',
-      contentType: file.mimetype,
-    });
-    
-    console.log('File uploaded to:', blob.url);
-    
-    // Calculate publication deadline (only if filed)
+    // Calculate publication deadline
     const publicationDeadline = (isPreFiling !== 'true' && filingDate) 
       ? calculatePublicationDeadline(filingDate) 
       : null;
@@ -246,9 +254,9 @@ export default async function handler(req, res) {
         ${filingDate || null},
         ${publicationDeadline},
         true,
-        ${extractedText},
-        ${blob.url},
-        ${file.filename},
+        ${combinedText},
+        ${JSON.stringify(fileUrls)},
+        ${JSON.stringify(fileNames)},
         NOW(),
         NOW()
       )
@@ -259,7 +267,6 @@ export default async function handler(req, res) {
     
     console.log('Application saved with ID:', application.id);
     
-    // Return success response
     return res.status(200).json({
       success: true,
       id: application.id,
@@ -267,18 +274,18 @@ export default async function handler(req, res) {
       filingDate: application.filing_date,
       publicationDeadline: application.publication_deadline,
       isPreFiling: isPreFiling === 'true' || !filingDate,
-      textLength: extractedText.length,
-      extractedText: extractedText.substring(0, 500) + '...', // Send preview only
-      fileUrl: blob.url,
-      fileName: file.filename,
-      message: 'Provisional application uploaded successfully'
+      fileCount: files.length,
+      fileNames: fileNames,
+      textLength: combinedText.length,
+      extractedText: combinedText.substring(0, 500) + '...',
+      fileUrls: fileUrls,
+      message: `${files.length} file(s) uploaded successfully`
     });
     
   } catch (error) {
     console.error('Error in upload-provisional:', error);
     console.error('Error stack:', error.stack);
     
-    // Return JSON error, not HTML
     return res.status(500).json({ 
       error: error.message || 'Failed to upload provisional application',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
