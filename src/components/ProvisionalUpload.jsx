@@ -3,12 +3,19 @@ import { useState } from 'react';
 /**
  * Phase A: Provisional Upload & Classification
  * 
- * Simplified User Flow:
- * 1. Upload provisional spec (PDF, TXT, or DOCX) - auto-extract title
+ * User Flow:
+ * 1. Upload provisional spec(s) (PDF, TXT, or DOCX) - auto-extract title
  * 2. Optionally enter filing date (may be pre-filing)
- * 3. Extract text, classify, extract PODs
+ * 3. Extract text, classify with Claude API, extract PODs
  * 4. User reviews/approves PODs
  * 5. Save to database
+ * 
+ * CHANGES FROM PREVIOUS VERSION:
+ * - ✅ Removed all mock data
+ * - ✅ Added real API calls to backend
+ * - ✅ Multiple file upload support
+ * - ✅ Multiple file types (PDF, TXT, DOCX)
+ * - ✅ Better error handling
  */
 
 export default function ProvisionalUpload() {
@@ -89,6 +96,7 @@ export default function ProvisionalUpload() {
     try {
       const formData = new FormData();
       
+      // Add all files to form data
       files.forEach(file => {
         formData.append('file', file);
       });
@@ -119,103 +127,110 @@ export default function ProvisionalUpload() {
         textLength: data.textLength
       });
 
+      // Immediately proceed to classification
       setTimeout(() => {
-        handleClassification();
-      }, 1000);
+        handleClassification(data.id, data.extractedText);
+      }, 500);
 
     } catch (err) {
+      console.error('Upload error:', err);
       setError(err.message);
       setIsProcessing(false);
       setStep('upload');
     }
   };
 
-  // Call USPTO classifier
-  const handleClassification = async () => {
+  // Call Claude API for classification and POD extraction
+  const handleClassification = async (appId, extractedText) => {
     setStep('classification');
 
     try {
-      const mockPredictions = [
-        { code: 'G06F 40/169', confidence: 0.92, description: 'Document processing' },
-        { code: 'G06N 3/08', confidence: 0.87, description: 'Neural networks' },
-        { code: 'G06F 16/33', confidence: 0.81, description: 'Query processing' },
-        { code: 'H04L 51/00', confidence: 0.75, description: 'User-to-user messaging' }
-      ];
+      // Call real backend API (NO MOCK DATA)
+      const response = await fetch('/api/classify-provisional', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          applicationId: appId,
+          specificationText: extractedText
+        })
+      });
 
-      setCpcPredictions(mockPredictions);
-      setPrimaryCpc(mockPredictions[0].code);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Classification failed');
+      }
+
+      const data = await response.json();
       
-      const area = determineTechnologyArea(mockPredictions[0].code);
+      console.log('Classification successful:', {
+        primaryCpc: data.primaryCpc,
+        predictionsCount: data.predictions?.length || 0,
+        podsCount: data.pods?.length || 0
+      });
+
+      // Set CPC classifications from API response
+      if (data.predictions && data.predictions.length > 0) {
+        setCpcPredictions(data.predictions);
+        setPrimaryCpc(data.primaryCpc || data.predictions[0].code);
+      } else {
+        throw new Error('No CPC predictions returned from API');
+      }
+      
+      // Set technology area
+      const area = data.technologyArea || determineTechnologyArea(data.primaryCpc || data.predictions[0].code);
       setTechnologyArea(area);
 
-      setTimeout(() => {
-        handlePodExtraction();
-      }, 1500);
-
-    } catch (err) {
-      setError(err.message);
-      setIsProcessing(false);
-      setStep('upload');
-    }
-  };
-
-  // Extract PODs
-  const handlePodExtraction = async () => {
-    setStep('pods');
-
-    try {
-      const mockPods = [
-        {
-          id: 1,
-          text: 'Mobile device interface for patent document creation',
-          rationale: 'Core distinguishing feature from desktop-only prior art',
-          isPrimary: true,
+      // Set PODs from API response
+      if (data.pods && data.pods.length > 0) {
+        // Transform PODs to match component state structure
+        const transformedPods = data.pods.map((pod, index) => ({
+          id: index + 1,
+          text: pod.pod_text || pod.text,
+          rationale: pod.rationale || 'AI-extracted POD',
+          isPrimary: pod.is_primary !== false, // Default to true if not specified
           suggested: true
-        },
-        {
-          id: 2,
-          text: 'AI-powered claim generation from natural language input',
-          rationale: 'Key innovation over manual drafting',
-          isPrimary: true,
-          suggested: true
-        },
-        {
-          id: 3,
-          text: 'Multi-modal input processing (text, voice, image)',
-          rationale: 'Enhances accessibility and user experience',
-          isPrimary: true,
-          suggested: true
-        },
-        {
-          id: 4,
-          text: 'Real-time prior art checking during drafting',
-          rationale: 'Secondary feature that adds value',
-          isPrimary: false,
-          suggested: true
-        }
-      ];
+        }));
+        
+        setSuggestedPods(transformedPods);
+        
+        // Auto-approve primary PODs
+        setApprovedPods(transformedPods.filter(p => p.isPrimary));
+      } else {
+        throw new Error('No PODs returned from API');
+      }
 
-      setSuggestedPods(mockPods);
-      setApprovedPods(mockPods.filter(p => p.isPrimary));
+      // Move to review step
       setIsProcessing(false);
       setStep('review');
 
     } catch (err) {
-      setError(err.message);
+      console.error('Classification error:', err);
+      setError(`Classification failed: ${err.message}`);
       setIsProcessing(false);
       setStep('upload');
     }
   };
 
+  // Helper function to determine technology area from CPC code
   const determineTechnologyArea = (cpcCode) => {
+    if (!cpcCode) return 'General Technology';
+    
     const prefix = cpcCode.substring(0, 3);
     const areaMap = {
-      'G06': 'Software/Computing',
-      'H04': 'Communication/Networking',
       'A61': 'Medical Devices',
+      'A63': 'Sports/Games/Amusements',
+      'B60': 'Vehicles',
+      'B62': 'Land Vehicles',
       'C07': 'Chemistry/Pharmaceuticals',
+      'C12': 'Biochemistry',
+      'E05': 'Locks/Keys/Accessories',
       'F16': 'Mechanical Engineering',
-      'H01': 'Electrical Engineering'
+      'G06': 'Software/Computing',
+      'G16': 'ICT for Healthcare',
+      'H01': 'Electrical Engineering',
+      'H04': 'Communication/Networking'
     };
     return areaMap[prefix] || 'General Technology';
   };
@@ -261,10 +276,37 @@ export default function ProvisionalUpload() {
     setError(null);
 
     try {
+      // Call backend API to save PODs to database
+      const response = await fetch('/api/save-provisional', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          applicationId,
+          approvedPods: approvedPods.map(pod => ({
+            text: pod.text,
+            rationale: pod.rationale,
+            isPrimary: pod.isPrimary,
+            suggested: pod.suggested
+          })),
+          primaryCpc,
+          technologyArea
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save PODs');
+      }
+
+      console.log('PODs saved successfully');
       setStep('complete');
       setIsProcessing(false);
+      
     } catch (err) {
-      setError(err.message);
+      console.error('Save error:', err);
+      setError(`Failed to save: ${err.message}`);
       setIsProcessing(false);
     }
   };
@@ -292,14 +334,11 @@ export default function ProvisionalUpload() {
           <span className={`text-sm ${step === 'classification' || step === 'processing' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
             2. Classify
           </span>
-          <span className={`text-sm ${step === 'pods' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
-            3. Extract PODs
-          </span>
           <span className={`text-sm ${step === 'review' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
-            4. Review
+            3. Review
           </span>
           <span className={`text-sm ${step === 'complete' ? 'text-green-600 font-semibold' : 'text-gray-500'}`}>
-            5. Complete
+            4. Complete
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -307,10 +346,9 @@ export default function ProvisionalUpload() {
             className="bg-blue-600 h-2 rounded-full transition-all duration-500"
             style={{ 
               width: step === 'upload' ? '0%' : 
-                     step === 'processing' ? '20%' :
-                     step === 'classification' ? '40%' :
-                     step === 'pods' ? '60%' :
-                     step === 'review' ? '80%' : '100%'
+                     step === 'processing' ? '25%' :
+                     step === 'classification' ? '50%' :
+                     step === 'review' ? '75%' : '100%'
             }}
           />
         </div>
@@ -319,7 +357,7 @@ export default function ProvisionalUpload() {
       {/* Error display */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-          {error}
+          <strong>Error:</strong> {error}
         </div>
       )}
 
@@ -366,7 +404,7 @@ export default function ProvisionalUpload() {
                       <p className="mb-1">✓ Files selected:</p>
                       <ul className="space-y-1 text-left max-w-xs mx-auto">
                         {files.map((f, i) => (
-                          <li key={i}>• {f.name}</li>
+                          <li key={i} className="truncate">• {f.name} ({(f.size / 1024).toFixed(0)} KB)</li>
                         ))}
                       </ul>
                     </div>
@@ -375,7 +413,7 @@ export default function ProvisionalUpload() {
               </label>
             </div>
             <p className="mt-2 text-xs text-gray-500">
-              Upload spec + drawings together. Title will be auto-generated.
+              Upload spec + drawings together. Title will be auto-generated from content.
             </p>
           </div>
 
@@ -414,7 +452,7 @@ export default function ProvisionalUpload() {
                 />
                 {filingDate && (
                   <p className="text-sm text-gray-600 mt-2">
-                    Publication deadline: {calculatePublicationDeadline(filingDate)}
+                    📅 Publication deadline: {calculatePublicationDeadline(filingDate)}
                   </p>
                 )}
               </div>
@@ -423,7 +461,7 @@ export default function ProvisionalUpload() {
             {isPreFiling && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-700">
-                  Pre-filing mode: No publication deadline tracking yet
+                  ℹ️ Pre-filing mode: No publication deadline tracking yet
                 </p>
               </div>
             )}
@@ -439,19 +477,20 @@ export default function ProvisionalUpload() {
         </div>
       )}
 
-      {/* Processing */}
-      {(step === 'processing' || step === 'classification' || step === 'pods') && (
+      {/* Processing / Classification */}
+      {(step === 'processing' || step === 'classification') && (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
           <h3 className="text-xl font-semibold mb-2">
             {step === 'processing' && 'Extracting text from files...'}
-            {step === 'classification' && 'Calling USPTO classifier...'}
-            {step === 'pods' && 'Extracting Points of Distinction...'}
+            {step === 'classification' && 'Analyzing with Claude API...'}
           </h3>
           <p className="text-gray-600">
-            {step === 'processing' && 'Reading your specification'}
-            {step === 'classification' && 'Predicting CPC classifications'}
-            {step === 'pods' && 'Identifying key distinguishing features'}
+            {step === 'processing' && 'Reading your specification and combining files'}
+            {step === 'classification' && 'Predicting CPC classifications and extracting Points of Distinction'}
+          </p>
+          <p className="text-xs text-gray-500 mt-4">
+            This may take 3-5 seconds...
           </p>
         </div>
       )}
@@ -464,28 +503,31 @@ export default function ProvisionalUpload() {
             <p className="text-sm mb-1">
               <span className="font-medium">Title:</span> {title}
             </p>
-            <p className="text-sm">
-              <span className="font-medium">Status:</span> {isPreFiling ? 'Pre-filing' : `Filed: ${filingDate}`}
+            <p className="text-sm mb-1">
+              <span className="font-medium">Status:</span> {isPreFiling ? '🟡 Pre-filing' : `🟢 Filed: ${filingDate}`}
             </p>
+            <p className="text-xs text-gray-500 font-mono">ID: {applicationId}</p>
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="font-semibold mb-2">Classification Results</h3>
             <div className="space-y-2">
               <p className="text-sm">
-                <span className="font-medium">Primary CPC:</span> {primaryCpc}
+                <span className="font-medium">Primary CPC:</span> <code className="bg-white px-2 py-1 rounded text-xs">{primaryCpc}</code>
               </p>
               <p className="text-sm">
                 <span className="font-medium">Technology Area:</span> {technologyArea}
               </p>
               <details className="text-sm">
-                <summary className="cursor-pointer text-blue-600 hover:text-blue-800">
+                <summary className="cursor-pointer text-blue-600 hover:text-blue-800 font-medium">
                   View all predictions ({cpcPredictions.length})
                 </summary>
                 <ul className="mt-2 space-y-1 pl-4">
                   {cpcPredictions.map((pred, idx) => (
-                    <li key={idx}>
-                      {pred.code} - {pred.description} ({(pred.confidence * 100).toFixed(0)}%)
+                    <li key={idx} className="text-xs">
+                      <code className="bg-white px-2 py-1 rounded">{pred.code}</code> 
+                      {pred.description && ` - ${pred.description}`}
+                      {pred.confidence && ` (${(pred.confidence * 100).toFixed(0)}%)`}
                     </li>
                   ))}
                 </ul>
@@ -498,7 +540,7 @@ export default function ProvisionalUpload() {
               Review Points of Distinction (PODs)
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Select at least 3 PODs that best describe your invention's unique features.
+              Select at least 3 PODs that best describe your invention's unique features. These will be used for prior art searching.
             </p>
 
             <div className="space-y-3">
@@ -521,24 +563,30 @@ export default function ProvisionalUpload() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           {pod.isPrimary && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">
                               Primary
                             </span>
                           )}
                           {pod.suggested && (
-                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
                               AI Suggested
+                            </span>
+                          )}
+                          {!pod.suggested && (
+                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                              User Added
                             </span>
                           )}
                         </div>
                         <textarea
                           value={pod.text}
                           onChange={(e) => editPodText(pod.id, e.target.value)}
+                          placeholder="Enter POD description..."
                           className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           rows={2}
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                          {pod.rationale}
+                          💡 {pod.rationale}
                         </p>
                       </div>
                     </div>
@@ -549,7 +597,7 @@ export default function ProvisionalUpload() {
 
             <button
               onClick={addCustomPod}
-              className="mt-4 w-full border-2 border-dashed border-gray-300 rounded-lg py-3 text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
+              className="mt-4 w-full border-2 border-dashed border-gray-300 rounded-lg py-3 text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors font-medium"
             >
               + Add Custom POD
             </button>
@@ -559,8 +607,13 @@ export default function ProvisionalUpload() {
             <p className="text-sm">
               <span className="font-medium">Approved PODs:</span> {approvedPods.length}
               {approvedPods.length < 3 && (
-                <span className="text-red-600 ml-2">
-                  (Minimum 3 required)
+                <span className="text-red-600 ml-2 font-medium">
+                  ⚠️ (Minimum 3 required)
+                </span>
+              )}
+              {approvedPods.length >= 3 && (
+                <span className="text-green-600 ml-2">
+                  ✓ Ready to save
                 </span>
               )}
             </p>
@@ -572,17 +625,20 @@ export default function ProvisionalUpload() {
                 setStep('upload');
                 setFiles([]);
                 setError(null);
+                setCpcPredictions([]);
+                setSuggestedPods([]);
+                setApprovedPods([]);
               }}
               className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
             >
-              Start Over
+              ← Start Over
             </button>
             <button
               onClick={handleSave}
               disabled={isProcessing || approvedPods.length < 3}
               className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
-              {isProcessing ? 'Saving...' : 'Save & Continue'}
+              {isProcessing ? 'Saving...' : 'Save & Continue →'}
             </button>
           </div>
         </div>
@@ -596,22 +652,25 @@ export default function ProvisionalUpload() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold mb-2">Provisional Application Uploaded!</h2>
+          <h2 className="text-2xl font-bold mb-2">Provisional Application Saved!</h2>
           <p className="text-gray-600 mb-6">
-            Your application has been saved and is ready for monitoring.
+            Your application has been saved with {approvedPods.length} approved PODs and is ready for Phase B (Prior Art Search).
           </p>
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
             <p className="text-sm text-gray-600 mb-2">Application Details:</p>
             <p className="font-medium">{title}</p>
-            <p className="text-sm text-gray-600">
-              {isPreFiling ? 'Pre-filing' : `Filed: ${filingDate}`}
+            <p className="text-sm text-gray-600 mt-1">
+              {isPreFiling ? '🟡 Pre-filing' : `🟢 Filed: ${filingDate}`}
             </p>
             {!isPreFiling && (
               <p className="text-sm text-gray-600">
-                Publication: {calculatePublicationDeadline(filingDate)}
+                📅 Publication: {calculatePublicationDeadline(filingDate)}
               </p>
             )}
-            <p className="text-sm text-gray-600 mt-2">PODs Approved: {approvedPods.length}</p>
+            <p className="text-sm text-gray-600 mt-2">
+              Primary CPC: <code className="bg-white px-2 py-1 rounded text-xs">{primaryCpc}</code>
+            </p>
+            <p className="text-sm text-gray-600 mt-1">PODs Approved: {approvedPods.length}</p>
             <p className="text-xs text-gray-500 mt-2 font-mono">ID: {applicationId}</p>
           </div>
           <div className="space-x-4">
@@ -626,6 +685,9 @@ export default function ProvisionalUpload() {
                 setApprovedPods([]);
                 setApplicationId(null);
                 setIsPreFiling(true);
+                setCpcPredictions([]);
+                setPrimaryCpc('');
+                setTechnologyArea('');
               }}
               className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
             >
@@ -633,11 +695,11 @@ export default function ProvisionalUpload() {
             </button>
             <button
               onClick={() => {
-                console.log('Navigate to POD search for application:', applicationId);
+                window.location.href = `/hunt/application/${applicationId}`;
               }}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
-              Continue to Search →
+              View Application →
             </button>
           </div>
         </div>
