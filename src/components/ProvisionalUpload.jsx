@@ -82,8 +82,6 @@ export default function ProvisionalUpload() {
       formData.append('isPreFiling', isPreFiling);
 
       const response = await fetch('/api/upload-provisional', {
-
-      const response = await fetch('/api/upload-provisional', {
         method: 'POST',
         body: formData
       });
