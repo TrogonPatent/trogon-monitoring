@@ -3,13 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 /**
  * Phase A: Provisional Upload & Classification
- * 
- * Simplified User Flow:
- * 1. Upload provisional spec (PDF or text) - auto-extract title
- * 2. Optionally enter filing date (may be pre-filing)
- * 3. Extract text, classify, extract PODs
- * 4. User reviews/approves PODs
- * 5. Save to database
+ * Multiple files + DOCX support + Real APIs
  */
 
 export default function ProvisionalUpload() {
@@ -17,47 +11,71 @@ export default function ProvisionalUpload() {
   
   // Form state
   const [filingDate, setFilingDate] = useState('');
-  const [file, setFile] = useState(null);
-  const [isPreFiling, setIsPreFiling] = useState(true); // Default to pre-filing
+  const [files, setFiles] = useState([]); // Changed to array
+  const [isPreFiling, setIsPreFiling] = useState(true);
   
   // Processing state
-  const [step, setStep] = useState('upload'); // upload | processing | classification | pods | review | complete
+  const [step, setStep] = useState('upload');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   
-  // Results state - populated during processing
-  const [title, setTitle] = useState(''); // Auto-generated from file
+  // Results state
+  const [title, setTitle] = useState('');
   const [specText, setSpecText] = useState('');
   const [cpcPredictions, setCpcPredictions] = useState([]);
   const [primaryCpc, setPrimaryCpc] = useState('');
   const [technologyArea, setTechnologyArea] = useState('');
   const [suggestedPods, setSuggestedPods] = useState([]);
   const [approvedPods, setApprovedPods] = useState([]);
-  
-  // Final application ID
   const [applicationId, setApplicationId] = useState(null);
 
-  // Handle file selection
+  // Handle file selection - MULTIPLE FILES + DOCX
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length === 0) return;
 
-    const fileType = selectedFile.type;
-    const validTypes = ['application/pdf', 'text/plain'];
+    const validTypes = [
+      'application/pdf',
+      'text/plain',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
     
-    if (!validTypes.includes(fileType)) {
-      setError('Please upload a PDF or text file');
+    const invalidFiles = selectedFiles.filter(f => !validTypes.includes(f.type));
+    if (invalidFiles.length > 0) {
+      setError(`Invalid file type: ${invalidFiles[0].name}. Please upload PDF, TXT, or DOCX files only.`);
       return;
     }
 
-    setFile(selectedFile);
+    setFiles(selectedFiles);
     setError(null);
   };
 
-  // Step 1: Upload and extract text
+  // Handle drag and drop
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+    
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    const validTypes = [
+      'application/pdf',
+      'text/plain',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    
+    const invalidFiles = droppedFiles.filter(f => !validTypes.includes(f.type));
+    if (invalidFiles.length > 0) {
+      setError(`Invalid file type: ${invalidFiles[0].name}. Please upload PDF, TXT, or DOCX files only.`);
+      return;
+    }
+    
+    setFiles(droppedFiles);
+    setError(null);
+  };
+
+  // Upload and extract text
   const handleUpload = async () => {
-    if (!file) {
-      setError('Please upload a provisional patent file');
+    if (files.length === 0) {
+      setError('Please upload at least one file');
       return;
     }
 
@@ -66,10 +84,14 @@ export default function ProvisionalUpload() {
     setStep('processing');
 
     try {
-      // Upload file and extract text
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('filingDate', filingDate || ''); // Empty if pre-filing
+      
+      // Add all files
+      files.forEach(file => {
+        formData.append('file', file);
+      });
+      
+      formData.append('filingDate', filingDate || '');
       formData.append('isPreFiling', isPreFiling);
 
       const response = await fetch('/api/upload-provisional', {
@@ -84,26 +106,19 @@ export default function ProvisionalUpload() {
       
       const data = await response.json();
       
-      // Set extracted data
-      const extractedText = data.extractedText || '';
-      const extractedTitle = data.title;
-      const appId = data.id;
-      
-      setSpecText(extractedText);
-      setTitle(extractedTitle);
-      setApplicationId(appId);
+      setSpecText(data.extractedText || '');
+      setTitle(data.title);
+      setApplicationId(data.id);
       
       console.log('Upload successful:', {
-        id: appId,
-        title: extractedTitle,
-        textLength: extractedText.length,
-        filingDate: data.filingDate,
-        isPreFiling: data.isPreFiling
+        id: data.id,
+        title: data.title,
+        fileCount: data.fileCount,
+        textLength: data.textLength
       });
 
-      // Move to classification step - pass data directly
       setTimeout(() => {
-        handleClassification(extractedText, extractedTitle, appId);
+        handleClassification(data.extractedText, data.title, data.id);
       }, 1000);
 
     } catch (err) {
@@ -113,17 +128,15 @@ export default function ProvisionalUpload() {
     }
   };
 
-  // Step 2 & 3 Combined: Call Classification API (gets both CPC + PODs)
+  // Call Classification API
   const handleClassification = async (textToClassify, titleToUse, appId) => {
     setStep('classification');
 
-    // Use passed parameters or fall back to state (for retry scenarios)
     const specTextToUse = textToClassify || specText;
     const titleToUseActual = titleToUse || title;
     const applicationIdToUse = appId || applicationId;
 
     try {
-      // Call our combined classify-provisional API
       const response = await fetch('/api/classify-provisional', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -147,19 +160,15 @@ export default function ProvisionalUpload() {
         cpcCount: data.cpcPredictions.length
       });
 
-      // Set CPC data
       setCpcPredictions(data.cpcPredictions);
       setPrimaryCpc(data.primaryCpc);
       setTechnologyArea(data.technologyArea);
 
-      // Show classification results briefly
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Move to POD extraction display
       setStep('pods');
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Transform POD data to match our component structure
       const transformedPods = data.pods.map((pod, index) => ({
         id: index + 1,
         text: pod.pod_text,
@@ -169,7 +178,7 @@ export default function ProvisionalUpload() {
       }));
 
       setSuggestedPods(transformedPods);
-      setApprovedPods(transformedPods.filter(p => p.isPrimary)); // Auto-approve primary PODs
+      setApprovedPods(transformedPods.filter(p => p.isPrimary));
       setIsProcessing(false);
       setStep('review');
 
@@ -181,7 +190,6 @@ export default function ProvisionalUpload() {
     }
   };
 
-  // Helper: Determine technology area from CPC
   const determineTechnologyArea = (cpcCode) => {
     const prefix = cpcCode.substring(0, 3);
     const areaMap = {
@@ -190,12 +198,13 @@ export default function ProvisionalUpload() {
       'A61': 'Medical Devices',
       'C07': 'Chemistry/Pharmaceuticals',
       'F16': 'Mechanical Engineering',
-      'H01': 'Electrical Engineering'
+      'H01': 'Electrical Engineering',
+      'E05': 'Locks/Keys/Accessories',
+      'B62': 'Land Vehicles'
     };
     return areaMap[prefix] || 'General Technology';
   };
 
-  // Toggle POD approval
   const togglePodApproval = (podId) => {
     const pod = suggestedPods.find(p => p.id === podId);
     if (!pod) return;
@@ -207,18 +216,15 @@ export default function ProvisionalUpload() {
     }
   };
 
-  // Edit POD text
   const editPodText = (podId, newText) => {
     setSuggestedPods(suggestedPods.map(pod => 
       pod.id === podId ? { ...pod, text: newText, suggested: false } : pod
     ));
-    // Update approved list if this POD is approved
     setApprovedPods(approvedPods.map(pod =>
       pod.id === podId ? { ...pod, text: newText, suggested: false } : pod
     ));
   };
 
-  // Add custom POD
   const addCustomPod = () => {
     const newPod = {
       id: Date.now(),
@@ -230,7 +236,6 @@ export default function ProvisionalUpload() {
     setSuggestedPods([...suggestedPods, newPod]);
   };
 
-  // Save to database
   const handleSave = async () => {
     if (approvedPods.length < 3) {
       setError('Please approve at least 3 PODs before saving');
@@ -241,7 +246,6 @@ export default function ProvisionalUpload() {
     setError(null);
 
     try {
-      // Call save API
       const response = await fetch('/api/save-provisional', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -263,10 +267,8 @@ export default function ProvisionalUpload() {
       }
 
       const data = await response.json();
-
       console.log('Save successful:', data.summary);
 
-      // Move to complete step
       setStep('complete');
       setIsProcessing(false);
 
@@ -277,7 +279,6 @@ export default function ProvisionalUpload() {
     }
   };
 
-  // Calculate publication deadline
   const calculatePublicationDeadline = (filingDate) => {
     if (!filingDate) return 'N/A (Pre-filing)';
     const date = new Date(filingDate);
@@ -287,7 +288,6 @@ export default function ProvisionalUpload() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Back to Dashboard Navigation */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <button
@@ -302,14 +302,12 @@ export default function ProvisionalUpload() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-4xl mx-auto p-6">
         <h1 className="text-3xl font-bold mb-2">Upload Provisional Patent Application</h1>
         <p className="text-gray-600 mb-6">
           Phase A: Upload your provisional specification to begin monitoring
         </p>
 
-        {/* Progress indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <span className={`text-sm ${step === 'upload' ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
@@ -342,25 +340,34 @@ export default function ProvisionalUpload() {
           </div>
         </div>
 
-        {/* Error display */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
             {error}
           </div>
         )}
 
-        {/* Step 1: Upload Form */}
         {step === 'upload' && (
           <div className="space-y-6">
-            {/* File Upload */}
             <div>
               <label className="block text-sm font-medium mb-2">
-                Upload Provisional Patent Data
+                Upload Provisional Patent Files
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+              <div 
+                className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+                }}
+                onDrop={handleDrop}
+              >
                 <input
                   type="file"
-                  accept=".pdf,.txt"
+                  accept=".pdf,.txt,.docx"
+                  multiple
                   onChange={handleFileChange}
                   className="hidden"
                   id="file-upload"
@@ -371,31 +378,34 @@ export default function ProvisionalUpload() {
                       <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                     <p className="text-sm text-gray-600 font-medium">
-                      {file ? file.name : 'Click to upload PDF or text file'}
+                      {files.length > 0 ? `${files.length} file${files.length > 1 ? 's' : ''} selected` : 'Click to upload or drag files here'}
                     </p>
                     <p className="text-xs text-gray-500">
-                      PDF or TXT up to 10MB
+                      PDF, DOCX, or TXT • Multiple files OK • 25MB total
                     </p>
-                    {file && (
-                      <p className="text-xs text-blue-600 font-medium">
-                        ✓ File selected
-                      </p>
+                    {files.length > 0 && (
+                      <div className="text-xs text-blue-600 font-medium mt-2">
+                        <p className="mb-1">✓ Files selected:</p>
+                        <ul className="space-y-1 text-left max-w-xs mx-auto">
+                          {files.map((f, i) => (
+                            <li key={i} className="truncate">• {f.name} ({(f.size / 1024).toFixed(0)} KB)</li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
                   </div>
                 </label>
               </div>
               <p className="mt-2 text-xs text-gray-500">
-                Title will be auto-generated from file content
+                Upload spec + drawings together. Title will be auto-generated from content.
               </p>
             </div>
 
-            {/* Filing Date (Optional) */}
             <div>
               <label className="block text-sm font-medium mb-2">
                 Filing Date <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               
-              {/* Pre-filing checkbox */}
               <div className="mb-3">
                 <label className="inline-flex items-center cursor-pointer">
                   <input
@@ -404,7 +414,7 @@ export default function ProvisionalUpload() {
                     onChange={(e) => {
                       setIsPreFiling(e.target.checked);
                       if (e.target.checked) {
-                        setFilingDate(''); // Clear date if switching to pre-filing
+                        setFilingDate('');
                       }
                     }}
                     className="h-4 w-4 text-blue-600 rounded"
@@ -442,7 +452,7 @@ export default function ProvisionalUpload() {
 
             <button
               onClick={handleUpload}
-              disabled={isProcessing || !file}
+              disabled={isProcessing || files.length === 0}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               {isProcessing ? 'Processing...' : 'Begin Classification'}
@@ -450,12 +460,11 @@ export default function ProvisionalUpload() {
           </div>
         )}
 
-        {/* Step 2-3: Processing */}
         {(step === 'processing' || step === 'classification' || step === 'pods') && (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
             <h3 className="text-xl font-semibold mb-2">
-              {step === 'processing' && 'Extracting text from file...'}
+              {step === 'processing' && 'Extracting text from files...'}
               {step === 'classification' && 'Calling USPTO classifier...'}
               {step === 'pods' && 'Extracting Points of Distinction...'}
             </h3>
@@ -467,10 +476,8 @@ export default function ProvisionalUpload() {
           </div>
         )}
 
-        {/* Step 4: Review PODs */}
         {step === 'review' && (
           <div className="space-y-6">
-            {/* Application Info */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h3 className="font-semibold mb-2">Application Details</h3>
               <p className="text-sm mb-1">
@@ -481,7 +488,6 @@ export default function ProvisionalUpload() {
               </p>
             </div>
 
-            {/* Classification Results */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="font-semibold mb-2">Classification Results</h3>
               <div className="space-y-2">
@@ -506,7 +512,6 @@ export default function ProvisionalUpload() {
               </div>
             </div>
 
-            {/* POD Review */}
             <div>
               <h3 className="text-xl font-semibold mb-4">
                 Review Points of Distinction (PODs)
@@ -570,7 +575,6 @@ export default function ProvisionalUpload() {
               </button>
             </div>
 
-            {/* Approval Summary */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <p className="text-sm">
                 <span className="font-medium">Approved PODs:</span> {approvedPods.length}
@@ -582,12 +586,11 @@ export default function ProvisionalUpload() {
               </p>
             </div>
 
-            {/* Action buttons */}
             <div className="flex gap-4">
               <button
                 onClick={() => {
                   setStep('upload');
-                  setFile(null);
+                  setFiles([]);
                   setError(null);
                 }}
                 className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
@@ -605,7 +608,6 @@ export default function ProvisionalUpload() {
           </div>
         )}
 
-        {/* Step 5: Complete */}
         {step === 'complete' && (
           <div className="text-center py-12">
             <div className="inline-block bg-green-100 rounded-full p-4 mb-4">
@@ -634,11 +636,10 @@ export default function ProvisionalUpload() {
             <div className="space-x-4">
               <button
                 onClick={() => {
-                  // Reset form for new application
                   setStep('upload');
                   setTitle('');
                   setFilingDate('');
-                  setFile(null);
+                  setFiles([]);
                   setSpecText('');
                   setSuggestedPods([]);
                   setApprovedPods([]);
@@ -650,10 +651,7 @@ export default function ProvisionalUpload() {
                 Upload Another
               </button>
               <button
-                onClick={() => {
-                  // Navigate back to dashboard
-                  navigate('/');
-                }}
+                onClick={() => navigate('/')}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
                 Back to Dashboard
