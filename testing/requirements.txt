@@ -1,0 +1,19 @@
+# USPTO Patent Testing Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core dependencies for download_and_parse.py
+requests>=2.31.0          # HTTP requests for USPTO bulk downloads
+lxml>=4.9.0               # XML parsing for patent data
+python-docx>=0.8.11       # Create specification DOCX files
+reportlab>=3.6.0          # Create drawing placeholder PDFs
+Pillow>=10.0.0            # Image processing (if needed)
+
+# API testing dependencies for upload_test.py
+# requests already listed above
+
+# Validation dependencies for validate_all.py and detailed_pod_analysis.py
+anthropic>=0.25.0         # Claude API for POD-claim analysis
+
+# Optional: Add if you use these later
+# pandas>=2.0.0           # Data analysis
+# numpy>=1.24.0           # Numerical operations
