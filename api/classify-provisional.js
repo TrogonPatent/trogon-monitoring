@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       textLength: specText.length
     });
 
-    // Call Claude API using Template 2
+    // Call Claude API with updated prompt
     const claudeResponse = await callClaudeAPI(specText, title);
 
     console.log('Claude raw response (first 200 chars):', claudeResponse.substring(0, 200));
@@ -55,13 +55,35 @@ export default async function handler(req, res) {
       throw new Error('Claude did not return valid PODs');
     }
 
-    // Extract CPC predictions from PODs
-    // Claude gives us primary_cpc_prediction, we'll generate additional predictions
-    const primaryCpc = result.primary_cpc_prediction || 'G06F 40/169';
-    const technologyArea = result.technology_area || 'Software/Computing';
+    if (!result.primary_cpc_prediction) {
+      throw new Error('Claude did not return primary CPC prediction');
+    }
 
-    // Generate CPC predictions based on technology area and primary CPC
-    const cpcPredictions = generateCpcPredictions(primaryCpc, technologyArea);
+    // Extract CPC predictions from Claude's response
+    const primaryCpc = result.primary_cpc_prediction;
+    const technologyArea = result.technology_area || 'General Technology';
+    const secondaryCpcs = result.secondary_cpc_predictions || [];
+
+    // Build CPC predictions array
+    const cpcPredictions = [];
+    
+    // Primary CPC (highest confidence)
+    cpcPredictions.push({
+      code: primaryCpc,
+      confidence: 0.92,
+      description: 'Primary technology classification'
+    });
+
+    // Secondary CPCs (decreasing confidence)
+    let confidence = 0.87;
+    for (const code of secondaryCpcs.slice(0, 4)) {
+      cpcPredictions.push({
+        code: code,
+        confidence: confidence,
+        description: 'Secondary classification'
+      });
+      confidence -= 0.06;
+    }
 
     console.log('Classification and POD extraction successful:', {
       primaryCpc,
@@ -92,20 +114,16 @@ export default async function handler(req, res) {
 
 /**
  * Strip markdown code blocks from Claude's response
- * Claude sometimes wraps JSON in ```json ... ``` even when told not to
  */
 function stripMarkdownCodeBlocks(text) {
-  // Remove ```json at start and ``` at end
   let cleaned = text.trim();
   
-  // Check if it starts with ```json or ```
   if (cleaned.startsWith('```json')) {
-    cleaned = cleaned.substring(7); // Remove ```json
+    cleaned = cleaned.substring(7);
   } else if (cleaned.startsWith('```')) {
-    cleaned = cleaned.substring(3); // Remove ```
+    cleaned = cleaned.substring(3);
   }
   
-  // Check if it ends with ```
   if (cleaned.endsWith('```')) {
     cleaned = cleaned.substring(0, cleaned.length - 3);
   }
@@ -114,7 +132,7 @@ function stripMarkdownCodeBlocks(text) {
 }
 
 /**
- * Call Claude API with Template 2 prompt
+ * Call Claude API with updated prompt
  */
 async function callClaudeAPI(specText, title) {
   const apiKey = process.env.CLAUDE_API_KEY;
@@ -123,10 +141,8 @@ async function callClaudeAPI(specText, title) {
     throw new Error('CLAUDE_API_KEY not configured in environment variables');
   }
 
-  // Build the prompt from Template 2
   const prompt = buildTemplate2Prompt(specText, title);
 
-  // Call Claude API
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -153,25 +169,23 @@ async function callClaudeAPI(specText, title) {
   }
 
   const data = await response.json();
-  
-  // Extract the text content from Claude's response
-  const content = data.content[0].text;
-  
-  return content;
+  return data.content[0].text;
 }
 
 /**
- * Build Template 2 prompt for POD extraction and CPC prediction
+ * Build updated prompt asking for multiple CPC predictions
  */
 function buildTemplate2Prompt(specText, title) {
-  // Truncate spec text if too long (keep first 8000 chars for context)
   const truncatedSpec = specText.length > 8000 
     ? specText.substring(0, 8000) + '\n\n[... specification truncated for API call ...]'
     : specText;
 
-  return `You are a patent attorney analyzing a provisional patent specification to extract Points of Distinction (PODs) for prior art searching.
+  return `You are a patent attorney analyzing a provisional patent specification to extract Points of Distinction (PODs) for prior art searching AND predict CPC classifications.
 
-TASK: Identify 3-5 Points of Distinction that differentiate this invention from existing technology.
+TASK: 
+1. Identify 3-5 Points of Distinction that differentiate this invention
+2. Predict the primary CPC classification code
+3. Predict 2-4 secondary CPC classification codes
 
 PROVISIONAL SPECIFICATION:
 Title: ${title}
@@ -186,13 +200,11 @@ A Point of Distinction is a technical feature, method step, or system component 
 4. Can be used as a search term or filter
 5. Is specific enough to narrow search results
 
-REQUIREMENTS:
-1. Extract 3-5 PODs (prefer 4-5 for better coverage)
-2. Each POD should be 1-3 sentences
-3. Use technical language from the specification
-4. Focus on WHAT makes it different, not WHY it's better
-5. Avoid marketing language or value judgments
-6. Prioritize concrete features over abstract concepts
+CPC CLASSIFICATION GUIDANCE:
+- Use the most specific CPC code possible (e.g., G06F 40/169, not just G06F)
+- Primary CPC should match the main invention concept
+- Secondary CPCs should cover related aspects or alternative implementations
+- Use standard CPC format: LETTER+NUMBERS+SPACE+NUMBERS/NUMBERS (e.g., "G06F 40/169", "B60Q 1/085")
 
 FORMAT YOUR RESPONSE AS JSON:
 {
@@ -201,85 +213,20 @@ FORMAT YOUR RESPONSE AS JSON:
       "pod_text": "The system uses machine learning to analyze patent claims in real-time during mobile filing, automatically suggesting amendments based on prior art similarity scores.",
       "rationale": "Combines mobile filing + ML claim analysis + real-time suggestions - not found in existing patent tools",
       "is_primary": true
-    },
-    {
-      "pod_text": "...",
-      "rationale": "...",
-      "is_primary": true
     }
   ],
-  "technology_area": "Software/ML" | "Mechanical/Electrical" | "Chemical/Biotech",
-  "primary_cpc_prediction": "G06F 40/169"
+  "technology_area": "Software/ML" | "Mechanical/Electrical" | "Chemical/Biotech" | "Medical Devices",
+  "primary_cpc_prediction": "G06F 40/169",
+  "secondary_cpc_predictions": [
+    "G06N 3/08",
+    "G06Q 50/18",
+    "H04L 51/00"
+  ]
 }
 
-OUTPUT ONLY VALID JSON - no markdown formatting, no code blocks, no explanations.
-Your response must start with { and end with }.`;
-}
-
-/**
- * Generate additional CPC predictions based on primary CPC and technology area
- */
-function generateCpcPredictions(primaryCpc, technologyArea) {
-  // Extract the prefix from primary CPC (e.g., "G06F" from "G06F 40/169")
-  const prefix = primaryCpc.substring(0, 4);
-  
-  // Map of common related CPCs by technology area
-  const relatedCpcs = {
-    'Software/ML': [
-      { code: 'G06F 40/169', description: 'Document processing and analysis' },
-      { code: 'G06N 3/08', description: 'Neural networks and machine learning' },
-      { code: 'G06F 16/33', description: 'Query processing and search' },
-      { code: 'G06Q 50/18', description: 'Legal services and intellectual property' },
-      { code: 'H04L 51/00', description: 'User-to-user messaging systems' }
-    ],
-    'Software/Computing': [
-      { code: 'G06F 40/169', description: 'Document processing and analysis' },
-      { code: 'G06F 16/00', description: 'Information retrieval and databases' },
-      { code: 'G06F 9/00', description: 'Computing arrangements' },
-      { code: 'G06Q 10/00', description: 'Administration and management systems' }
-    ],
-    'Mechanical/Electrical': [
-      { code: 'F16', description: 'Engineering elements and units' },
-      { code: 'H01', description: 'Basic electric elements' },
-      { code: 'H04', description: 'Electric communication technique' },
-      { code: 'G01', description: 'Measuring and testing' }
-    ],
-    'Chemical/Biotech': [
-      { code: 'A61K', description: 'Preparations for medical, dental, or toilet purposes' },
-      { code: 'C07', description: 'Organic chemistry' },
-      { code: 'C12', description: 'Biochemistry, microbiology, enzymology' },
-      { code: 'A61P', description: 'Therapeutic activity of chemical compounds' }
-    ]
-  };
-
-  // Get related CPCs for this technology area
-  let cpcs = relatedCpcs[technologyArea] || relatedCpcs['Software/Computing'];
-  
-  // Build predictions array, ensuring primary CPC is first with highest confidence
-  const predictions = [];
-  
-  // Add primary CPC first
-  const primaryDescription = cpcs.find(c => c.code === primaryCpc)?.description 
-    || 'Primary technology classification';
-  
-  predictions.push({
-    code: primaryCpc,
-    confidence: 0.92,
-    description: primaryDescription
-  });
-
-  // Add related CPCs with decreasing confidence
-  let confidence = 0.87;
-  for (const cpc of cpcs) {
-    if (cpc.code !== primaryCpc && predictions.length < 4) {
-      predictions.push({
-        code: cpc.code,
-        confidence: confidence,
-        description: cpc.description
-      });
-      confidence -= 0.06;
-    }
-  }
-
-  return predictions;
+CRITICAL: 
+- Use specific CPC codes with proper formatting (include the space and slash)
+- Secondary CPCs must be relevant to THIS invention, not generic fallbacks
+- Output ONLY valid JSON - no markdown, no code blocks, no explanations
+- Your response must start with { and end with }`;
 }
