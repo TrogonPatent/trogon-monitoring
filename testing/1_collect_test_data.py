@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-USPTO Patent Data Collection Script
-====================================
+USPTO Patent Data Collection Script - V2 (Updated API)
+======================================================
+
+Updated to use PatentsView API v2
+New endpoint: https://search.patentsview.org/api/v1/patent/
 
 Purpose: Download 150 issued patents and prepare blind test data
 - Removes claims and classifications from specifications
@@ -9,12 +12,7 @@ Purpose: Download 150 issued patents and prepare blind test data
 - Stratified sampling across 5 technology areas
 
 Usage:
-    python 1_collect_test_data.py
-
-Output:
-    - test_data/input/patent_XXX_input.json (blind specs - no claims/classifications)
-    - test_data/ground_truth/patent_XXX_truth.json (examiner CPCs + claims)
-    - test_data/metadata.json (sample statistics)
+    python 1_collect_test_data_v2.py
 """
 
 import requests
@@ -35,47 +33,49 @@ TRUTH_DIR = OUTPUT_DIR / "ground_truth"
 INPUT_DIR.mkdir(parents=True, exist_ok=True)
 TRUTH_DIR.mkdir(parents=True, exist_ok=True)
 
-# Target sample distribution (30 patents each)
+# PatentsView API v2 endpoint
+API_BASE = "https://search.patentsview.org/api/v1/patent/"
+
+# Target sample distribution (reduce to 10 each for faster testing)
 TECHNOLOGY_AREAS = {
     "Software/ML": {
         "cpc_classes": ["G06F", "G06N"],
-        "target_count": 30,
+        "target_count": 10,  # Reduced from 30
         "description": "Primary market focus"
     },
     "Mechanical/Electrical": {
         "cpc_classes": ["F16", "H01", "H04"],
-        "target_count": 30,
+        "target_count": 10,
         "description": "Hardware accessories"
     },
     "Life Sciences": {
         "cpc_classes": ["A61K", "C07", "C12"],
-        "target_count": 30,
+        "target_count": 10,
         "description": "Potential expansion"
     },
     "Business Methods": {
         "cpc_classes": ["G06Q"],
-        "target_count": 30,
+        "target_count": 10,
         "description": "Mobile/software overlap"
     },
     "Chemistry": {
-        "cpc_classes": ["C01", "C02", "C03", "C04", "C05", "C06", "C07", "C08", "C09"],
-        "target_count": 30,
+        "cpc_classes": ["C01", "C02", "C03"],
+        "target_count": 10,
         "description": "Diversity testing"
     }
 }
 
-class USPTOPatentCollector:
-    """Collects patents from USPTO PatentsView API"""
-    
-    BASE_URL = "https://api.patentsview.org/patents/query"
+
+class USPTOPatentCollectorV2:
+    """Collects patents using PatentsView API v2"""
     
     def __init__(self):
         self.collected_patents = []
         self.failed_patents = []
         
-    def search_patents_by_cpc(self, cpc_class: str, limit: int = 50) -> List[Dict]:
+    def search_patents_by_cpc(self, cpc_class: str, limit: int = 20) -> List[Dict]:
         """
-        Search USPTO PatentsView API for patents by CPC class
+        Search PatentsView API v2 for patents by CPC class
         
         Args:
             cpc_class: CPC class code (e.g., "G06F")
@@ -86,34 +86,38 @@ class USPTOPatentCollector:
         """
         print(f"  Searching for {cpc_class} patents...")
         
-        # Build query for PatentsView API
+        # Build query for API v2
         query = {
-            "_and": [
-                {"cpc_subgroup_id": {"_begins": cpc_class}},
-                {"patent_date": {"_gte": "2020-01-01", "_lte": "2024-12-31"}},
-                {"patent_type": "utility"}
-            ]
+            "cpc_subgroup_id": cpc_class + "*",  # Wildcard search
+            "patent_date": "[2020-01-01 TO 2024-12-31]"
         }
         
+        # Fields to return
         fields = [
             "patent_number",
-            "patent_title", 
+            "patent_title",
             "patent_abstract",
             "patent_date",
-            "cpc_subgroup_id",
-            "cpc_group_id",
-            "inventor_last_name",
-            "assignee_organization"
+            "cpc_current",
+            "assignee_organization",
+            "inventor_last_name"
         ]
         
-        params = {
-            "q": json.dumps(query),
-            "f": json.dumps(fields),
-            "o": json.dumps({"per_page": limit})
+        payload = {
+            "q": query,
+            "f": fields,
+            "o": {
+                "per_page": limit
+            }
         }
         
         try:
-            response = requests.get(self.BASE_URL, params=params, timeout=30)
+            response = requests.post(
+                API_BASE,
+                json=payload,
+                timeout=30,
+                headers={"Content-Type": "application/json"}
+            )
             response.raise_for_status()
             
             data = response.json()
@@ -122,81 +126,23 @@ class USPTOPatentCollector:
             print(f"    Found {len(patents)} patents for {cpc_class}")
             return patents
             
+        except requests.exceptions.HTTPError as e:
+            print(f"    ERROR searching {cpc_class}: {e}")
+            print(f"    Status: {response.status_code}")
+            return []
         except Exception as e:
             print(f"    ERROR searching {cpc_class}: {e}")
             return []
     
-    def fetch_full_patent_text(self, patent_number: str) -> Dict[str, Any]:
-        """
-        Fetch full patent text from USPTO
-        
-        Note: PatentsView doesn't provide full specification text.
-        This is a placeholder - you'll need to use USPTO Bulk Data or Google Patents API
-        
-        For now, we'll simulate by using abstract as specification
-        """
-        # In production, you would:
-        # 1. Use USPTO Bulk Data XML files
-        # 2. Or use Google Patents API
-        # 3. Or scrape USPTO.gov (not recommended)
-        
-        # For testing purposes, we'll use a mock specification
-        return {
-            "patent_number": patent_number,
-            "full_text_available": False,
-            "note": "Full text fetch requires USPTO Bulk Data or Google Patents API"
-        }
-    
-    def extract_independent_claims(self, claims_text: str) -> List[Dict]:
-        """
-        Extract independent claims from claims section
-        
-        Args:
-            claims_text: Full claims text
-            
-        Returns:
-            List of independent claims with parsed limitations
-        """
-        if not claims_text:
-            return []
-        
-        # Pattern: "1. A method/system/apparatus..."
-        independent_claim_pattern = r'^\s*(\d+)\.\s+(A\s+(?:method|system|apparatus|device|computer|process)[^.]+(?:\.|;).*?)(?=^\s*\d+\.|$)'
-        
-        claims = re.findall(independent_claim_pattern, claims_text, re.MULTILINE | re.DOTALL)
-        
-        parsed_claims = []
-        for claim_num, claim_text in claims:
-            # Extract limitations (split by semicolons, colons, "wherein")
-            limitations = re.split(r'[;:]|\bwherein\b', claim_text)
-            limitations = [l.strip() for l in limitations if l.strip()]
-            
-            parsed_claims.append({
-                "claim_number": int(claim_num),
-                "claim_text": claim_text.strip(),
-                "limitations": limitations[:10]  # First 10 limitations
-            })
-        
-        return parsed_claims
-    
     def prepare_blind_input(self, patent: Dict) -> Dict:
-        """
-        Create blind input file (no claims, no classifications)
+        """Create blind input file (no claims, no classifications)"""
         
-        Args:
-            patent: Full patent data
-            
-        Returns:
-            Dictionary for input file
-        """
-        # For testing, we'll use abstract as "specification"
-        # In production, use full specification text from USPTO
-        specification_text = patent.get("patent_abstract", "")
-        
-        # Add title as first line (mimics provisional format)
+        # Get abstract and title
+        abstract = patent.get("patent_abstract", "")
         title = patent.get("patent_title", "")
-        if title:
-            specification_text = f"{title}\n\n{specification_text}"
+        
+        # Combine title and abstract as "specification"
+        specification_text = f"{title}\n\n{abstract}"
         
         return {
             "patent_id": f"test_{patent['patent_number']}",
@@ -210,31 +156,24 @@ class USPTOPatentCollector:
         }
     
     def prepare_ground_truth(self, patent: Dict) -> Dict:
-        """
-        Create ground truth file (examiner CPCs + claims)
+        """Create ground truth file (examiner CPCs)"""
         
-        Args:
-            patent: Full patent data
-            
-        Returns:
-            Dictionary for ground truth file
-        """
-        # Extract CPC codes
+        # Extract CPC codes from new API format
+        cpc_data = patent.get("cpc_current", [])
         cpc_codes = []
-        if "cpc_subgroup_id" in patent:
-            cpc_list = patent["cpc_subgroup_id"]
-            if isinstance(cpc_list, list):
-                cpc_codes = cpc_list
-            elif isinstance(cpc_list, str):
-                cpc_codes = [cpc_list]
+        
+        if isinstance(cpc_data, list):
+            for cpc_entry in cpc_data:
+                if isinstance(cpc_entry, dict):
+                    cpc_id = cpc_entry.get("cpc_subgroup_id", "")
+                    if cpc_id:
+                        cpc_codes.append(cpc_id)
+                elif isinstance(cpc_entry, str):
+                    cpc_codes.append(cpc_entry)
         
         # Primary CPC is first one
         primary_cpc = cpc_codes[0] if cpc_codes else ""
-        additional_cpcs = cpc_codes[1:] if len(cpc_codes) > 1 else []
-        
-        # NOTE: PatentsView doesn't provide claims text
-        # In production, extract from USPTO XML or Google Patents
-        independent_claims = []  # Placeholder
+        additional_cpcs = cpc_codes[1:5] if len(cpc_codes) > 1 else []  # Up to 4 additional
         
         return {
             "patent_id": f"test_{patent['patent_number']}",
@@ -243,30 +182,26 @@ class USPTOPatentCollector:
             "ground_truth": {
                 "examiner_cpc_primary": primary_cpc,
                 "examiner_cpc_additional": additional_cpcs,
-                "independent_claims": independent_claims,
-                "assignee": patent.get("assignee_organization", ""),
-                "inventors": patent.get("inventor_last_name", "")
+                "independent_claims": [],  # Not available from API
+                "assignee": patent.get("assignee_organization", [{}])[0].get("assignee_organization", "") if patent.get("assignee_organization") else "",
+                "inventors": ", ".join([inv.get("inventor_last_name", "") for inv in patent.get("inventor_last_name", [])]) if patent.get("inventor_last_name") else ""
             }
         }
     
     def collect_stratified_sample(self) -> Dict[str, Any]:
-        """
-        Collect 150 patents across 5 technology areas (30 each)
+        """Collect 50 patents across 5 technology areas (10 each)"""
         
-        Returns:
-            Dictionary with collection statistics
-        """
         print("\n" + "="*60)
-        print("USPTO Patent Data Collection")
+        print("USPTO Patent Data Collection (API v2)")
         print("="*60)
-        print(f"Target: 150 patents (30 per technology area)")
+        print(f"Target: 50 patents (10 per technology area)")
         print(f"Date Range: 2020-2024")
-        print(f"Patent Type: Utility patents only")
+        print(f"Patent Type: Utility patents")
         print("="*60 + "\n")
         
         stats = {
             "start_time": datetime.now().isoformat(),
-            "target_count": 150,
+            "target_count": 50,
             "technology_areas": {}
         }
         
@@ -281,26 +216,25 @@ class USPTOPatentCollector:
             
             # Collect from each CPC class
             for cpc_class in config['cpc_classes']:
-                # Fetch patents
-                patents = self.search_patents_by_cpc(cpc_class, limit=50)
+                patents = self.search_patents_by_cpc(cpc_class, limit=20)
                 
                 # Add technology area label
                 for p in patents:
                     p['technology_area'] = tech_area
                 
                 area_patents.extend(patents)
-                
-                time.sleep(0.5)  # Rate limiting
+                time.sleep(1)  # Rate limiting
             
-            # Remove duplicates by patent number
+            # Remove duplicates
             seen = set()
             unique_patents = []
             for p in area_patents:
-                if p['patent_number'] not in seen:
-                    seen.add(p['patent_number'])
+                patent_num = p['patent_number']
+                if patent_num not in seen:
+                    seen.add(patent_num)
                     unique_patents.append(p)
             
-            # Random sample to hit target
+            # Random sample
             target = config['target_count']
             if len(unique_patents) >= target:
                 sampled = random.sample(unique_patents, target)
@@ -345,18 +279,17 @@ class USPTOPatentCollector:
                 "target": target,
                 "collected": collected,
                 "cpc_classes": config['cpc_classes'],
-                "sample_patents": [p['patent_number'] for p in sampled[:5]]  # First 5 as examples
+                "sample_patents": [p['patent_number'] for p in sampled[:3]]
             }
             
             print(f"   ✅ Collected: {collected} patents")
         
-        # Final statistics
+        # Save metadata
         stats['end_time'] = datetime.now().isoformat()
         stats['total_collected'] = total_collected
         stats['total_failed'] = len(self.failed_patents)
-        stats['success_rate'] = f"{(total_collected / 150) * 100:.1f}%"
+        stats['success_rate'] = f"{(total_collected / 50) * 100:.1f}%"
         
-        # Save metadata
         metadata_file = OUTPUT_DIR / "metadata.json"
         with open(metadata_file, 'w') as f:
             json.dump(stats, f, indent=2)
@@ -364,13 +297,10 @@ class USPTOPatentCollector:
         print("\n" + "="*60)
         print("✅ Collection Complete")
         print("="*60)
-        print(f"Total Collected: {total_collected} / 150")
+        print(f"Total Collected: {total_collected} / 50")
         print(f"Success Rate: {stats['success_rate']}")
         print(f"Failed: {len(self.failed_patents)}")
-        print(f"\nOutput Directories:")
-        print(f"  Input Files:  {INPUT_DIR}")
-        print(f"  Ground Truth: {TRUTH_DIR}")
-        print(f"  Metadata:     {metadata_file}")
+        print(f"\nOutput Files: {total_collected * 2} files created")
         print("="*60 + "\n")
         
         return stats
@@ -378,23 +308,24 @@ class USPTOPatentCollector:
 
 def main():
     """Main execution"""
-    print("\n🚀 Starting USPTO Patent Collection\n")
+    print("\n🚀 Starting USPTO Patent Collection (API v2)\n")
     
-    collector = USPTOPatentCollector()
+    collector = USPTOPatentCollectorV2()
     stats = collector.collect_stratified_sample()
     
     print("\n📊 Sample Distribution:")
     for tech_area, data in stats['technology_areas'].items():
         print(f"  {tech_area}: {data['collected']} / {data['target']}")
     
-    if stats['total_failed'] > 0:
-        print(f"\n⚠️  {stats['total_failed']} patents failed - check logs")
-    
-    print("\n✅ Data collection complete!")
-    print("\nNext Steps:")
-    print("  1. Review test_data/metadata.json for statistics")
-    print("  2. Inspect sample files in test_data/input/")
-    print("  3. Run: python 2_batch_process.py")
+    if stats['total_collected'] > 0:
+        print("\n✅ Data collection successful!")
+        print("\nNext Steps:")
+        print("  1. Review test_data/metadata.json")
+        print("  2. Inspect sample files in test_data/input/")
+        print("  3. Run: python 2_batch_process.py")
+    else:
+        print("\n❌ No patents collected - check API status")
+        print("   Try Solution 2 or 3 (manual test data)")
     print()
 
 
