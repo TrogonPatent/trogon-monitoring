@@ -91,12 +91,41 @@ class TrogonUploader:
             
             print(f"  ✓ Classified → Primary CPC: {classify_data.get('primaryCpc', 'N/A')}")
             
+            # Step 3: Save to database
+            time.sleep(0.5)
+            
+            save_payload = {
+                'applicationId': application_id,
+                'title': upload_data.get('title', ''),
+                'filingDate': None,
+                'isPreFiling': True,
+                'cpcPredictions': classify_data.get('cpcPredictions', []),
+                'primaryCpc': classify_data.get('primaryCpc', ''),
+                'technologyArea': classify_data.get('technologyArea', ''),
+                'approvedPods': classify_data.get('pods', [])
+            }
+            
+            response = requests.post(
+                f"{self.api_url}/api/save-provisional",
+                json=save_payload,
+                headers={'Content-Type': 'application/json'},
+                timeout=60
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"Save failed: {response.status_code} - {response.text}")
+            
+            save_data = response.json()
+            
+            print(f"  ✓ Saved to database → {save_data.get('summary', {}).get('podCount', 0)} PODs")
+            
             # Save result
             result = {
                 'patent_number': patent_num,
                 'application_id': application_id,
                 'upload_response': upload_data,
                 'classify_response': classify_data,
+                'save_response': save_data,
                 'timestamp': time.time()
             }
             
