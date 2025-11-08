@@ -143,37 +143,36 @@ class USPTOParser:
         
         print(f"Found {len(parts)-1} patent documents")
         
-        # Debug: Print structure of first patent
-        first_patent_xml = b'<?xml version="1.0" encoding="UTF-8"?>' + parts[1]
-        first_root = etree.fromstring(first_patent_xml)
-        print("\n=== FIRST PATENT XML STRUCTURE ===")
-        print(f"Root tag: {first_root.tag}")
-        for child in first_root[:5]:  # First 5 children
-            print(f"  Child: {child.tag}")
-            for subchild in child[:3]:  # First 3 grandchildren
-                print(f"    Grandchild: {subchild.tag}")
+        for i, part in enumerate(parts[1:], 1):  # Skip first empty part
+            if not part.strip():
+                continue
+            
+            try:
+                # Add XML declaration back
+                xml_doc = b'<?xml version="1.0" encoding="UTF-8"?>' + part
+                
+                # Parse this individual patent
+                root = etree.fromstring(xml_doc)
+                
+                # In 2025 format, root IS the us-patent-grant element
+                if 'us-patent-grant' not in root.tag:
+                    continue
+                
+                patent = self.parse_patent_xml(root)
+                if patent:
+                    patents.append(patent)
+                    
+                    if len(patents) % 100 == 0:
+                        print(f"\rParsed {len(patents)} patents...", end='', flush=True)
+                    
+                    if max_count and len(patents) >= max_count:
+                        break
+            
+            except Exception as e:
+                # Skip malformed patents
+                pass
         
-        # Check for CPC in different locations
-        cpc_locations = [
-            './/classification-cpc',
-            './/classifications-cpc',
-            './/cpc-classification',
-            './/main-classification',
-            './/classification-cpc-text'
-        ]
-        
-        print("\n=== SEARCHING FOR CPC CODES ===")
-        for loc in cpc_locations:
-            found = first_root.findall(loc)
-            if found:
-                print(f"✓ Found {len(found)} elements at: {loc}")
-                if found[0].text:
-                    print(f"  Text: {found[0].text}")
-            else:
-                print(f"✗ Not found: {loc}")
-        
-        print("=" * 50)
-        sys.exit(0)  # Stop here to review structure
+        return patents
         
         for i, part in enumerate(parts[1:], 1):  # Skip first empty part
             if not part.strip():
@@ -221,7 +220,6 @@ class USPTOParser:
         # Title
         title = elem.find('.//invention-title')
         if title is None or not title.text:
-            print(f"  Skipping {patent['number']}: No title")
             return None
         patent['title'] = title.text.strip()
         
@@ -236,25 +234,44 @@ class USPTOParser:
         # CPC Classifications (ground truth)
         cpc_codes = []
         
-        # Primary CPC
-        main_cpc = elem.find('.//classification-cpc/main-cpc/classification-cpc-text')
-        if main_cpc is not None and main_cpc.text:
-            patent['primary_cpc'] = main_cpc.text.strip()
-            cpc_codes.append({
-                'code': main_cpc.text.strip(),
-                'type': 'primary'
-            })
-        else:
-            print(f"  Skipping {patent['number']}: No primary CPC")
-            return None  # Skip if no primary CPC
-        
-        # Additional CPCs
-        for further_cpc in elem.findall('.//classification-cpc/further-cpc/classification-cpc-text'):
-            if further_cpc.text:
+        # Try 2025 format first (direct classification-cpc-text)
+        cpc_texts = elem.findall('.//classification-cpc-text')
+        if cpc_texts:
+            # First one is primary
+            if cpc_texts[0].text:
+                patent['primary_cpc'] = cpc_texts[0].text.strip()
                 cpc_codes.append({
-                    'code': further_cpc.text.strip(),
-                    'type': 'secondary'
+                    'code': cpc_texts[0].text.strip(),
+                    'type': 'primary'
                 })
+                
+                # Rest are secondary
+                for cpc_text in cpc_texts[1:]:
+                    if cpc_text.text:
+                        cpc_codes.append({
+                            'code': cpc_text.text.strip(),
+                            'type': 'secondary'
+                        })
+        else:
+            # Try 2024 format (nested under classification-cpc)
+            main_cpc = elem.find('.//classification-cpc/main-cpc/classification-cpc-text')
+            if main_cpc is not None and main_cpc.text:
+                patent['primary_cpc'] = main_cpc.text.strip()
+                cpc_codes.append({
+                    'code': main_cpc.text.strip(),
+                    'type': 'primary'
+                })
+                
+                # Additional CPCs
+                for further_cpc in elem.findall('.//classification-cpc/further-cpc/classification-cpc-text'):
+                    if further_cpc.text:
+                        cpc_codes.append({
+                            'code': further_cpc.text.strip(),
+                            'type': 'secondary'
+                        })
+        
+        if not patent.get('primary_cpc'):
+            return None
         
         patent['all_cpc_codes'] = cpc_codes
         
@@ -293,13 +310,10 @@ class USPTOParser:
         
         # Skip if missing critical data
         if not patent['description'] or len(patent['description']) < 500:
-            print(f"  Skipping {patent['number']}: Description too short ({len(patent['description'])} chars)")
             return None  # Too short
         if not patent['claims']:
-            print(f"  Skipping {patent['number']}: No claims")
             return None  # No claims
         
-        print(f"  ✓ Valid patent: {patent['number']}")
         return patent
     
     def create_spec_docx(self, patent):
