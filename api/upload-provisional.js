@@ -27,12 +27,12 @@ async function extractText(buffer, mimetype, filename) {
   // PDF file - use pdf-parse
   if (mimetype === 'application/pdf' || filename.endsWith('.pdf')) {
     try {
-      // Require inside function for Vercel serverless compatibility
-      const pdfParse = require('pdf-parse');
-      const data = await pdfParse(buffer);
+      // Dynamic import for Vercel serverless
+      const pdfParse = await import('pdf-parse');
+      const data = await pdfParse.default(buffer);
       return data.text;
     } catch (error) {
-      if (error.code === 'MODULE_NOT_FOUND') {
+      if (error.code === 'ERR_MODULE_NOT_FOUND') {
         throw new Error('PDF parsing package not installed');
       }
       throw new Error(`Failed to extract text from PDF: ${error.message}`);
