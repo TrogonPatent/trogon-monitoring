@@ -99,32 +99,75 @@ class USPTOParser:
             print(f"Parsing {xml_file}...")
             
             with zf.open(xml_file) as xf:
-                # Parse incrementally to handle large files
-                context = etree.iterparse(xf, events=('end',), tag='us-patent-grant')
+                # Read file content
+                content = xf.read()
                 
-                for event, elem in context:
-                    try:
-                        patent = self.parse_patent_xml(elem)
-                        if patent:
-                            patents.append(patent)
-                            
-                            if len(patents) % 100 == 0:
-                                print(f"\rParsed {len(patents)} patents...", end='', flush=True)
-                            
-                            # Stop if we've reached max_count
-                            if max_count and len(patents) >= max_count:
-                                break
-                    
-                    except Exception as e:
-                        # Skip patents with parsing errors
-                        pass
-                    
-                    # Clear element to save memory
-                    elem.clear()
-                    while elem.getprevious() is not None:
-                        del elem.getparent()[0]
+                # Check if this is 2025 format (multiple XML declarations)
+                if content.count(b'<?xml') > 1:
+                    print("Detected 2025 format (multiple XML declarations)")
+                    patents = self.parse_2025_format(content, max_count)
+                else:
+                    print("Detected 2024 format (single XML document)")
+                    patents = self.parse_2024_format(content, max_count)
         
         print(f"\n✓ Parsed {len(patents)} valid patents")
+        return patents
+    
+    def parse_2024_format(self, content, max_count=None):
+        """Parse 2024 format (single XML document)"""
+        patents = []
+        root = etree.fromstring(content)
+        
+        for elem in root.findall('.//us-patent-grant'):
+            try:
+                patent = self.parse_patent_xml(elem)
+                if patent:
+                    patents.append(patent)
+                    
+                    if len(patents) % 100 == 0:
+                        print(f"\rParsed {len(patents)} patents...", end='', flush=True)
+                    
+                    if max_count and len(patents) >= max_count:
+                        break
+            except Exception as e:
+                pass
+        
+        return patents
+    
+    def parse_2025_format(self, content, max_count=None):
+        """Parse 2025 format (multiple XML declarations)"""
+        patents = []
+        
+        # Split by XML declarations
+        parts = content.split(b'<?xml version="1.0" encoding="UTF-8"?>')
+        
+        print(f"Found {len(parts)-1} patent documents")
+        
+        for i, part in enumerate(parts[1:], 1):  # Skip first empty part
+            if not part.strip():
+                continue
+            
+            try:
+                # Add XML declaration back
+                xml_doc = b'<?xml version="1.0" encoding="UTF-8"?>' + part
+                
+                # Parse this individual patent
+                root = etree.fromstring(xml_doc)
+                
+                patent = self.parse_patent_xml(root)
+                if patent:
+                    patents.append(patent)
+                    
+                    if len(patents) % 100 == 0:
+                        print(f"\rParsed {len(patents)} patents...", end='', flush=True)
+                    
+                    if max_count and len(patents) >= max_count:
+                        break
+            
+            except Exception as e:
+                # Skip malformed patents
+                pass
+        
         return patents
     
     def parse_patent_xml(self, elem):
