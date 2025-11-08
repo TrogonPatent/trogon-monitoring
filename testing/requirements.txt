@@ -4,23 +4,9 @@
 # Claude API
 anthropic>=0.35.0
 
-# HTTP requests for USPTO PatentsView API
+# HTTP requests
 requests>=2.31.0
 
-# JSON handling (built-in, but listed for clarity)
-# json - built-in
-
-# CSV export (built-in)
-# csv - built-in
-
-# Path handling (built-in)  
-# pathlib - built-in
-
-# Date/time utilities (built-in)
-# datetime - built-in
-
-# Collections utilities (built-in)
-# collections - built-in
-
-# Regular expressions (built-in)
-# re - built-in
+# Web scraping for Google Patents
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
