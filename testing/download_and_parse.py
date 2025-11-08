@@ -189,6 +189,7 @@ class USPTOParser:
         # Title
         title = elem.find('.//invention-title')
         if title is None or not title.text:
+            print(f"  Skipping {patent['number']}: No title")
             return None
         patent['title'] = title.text.strip()
         
@@ -212,6 +213,7 @@ class USPTOParser:
                 'type': 'primary'
             })
         else:
+            print(f"  Skipping {patent['number']}: No primary CPC")
             return None  # Skip if no primary CPC
         
         # Additional CPCs
@@ -259,10 +261,13 @@ class USPTOParser:
         
         # Skip if missing critical data
         if not patent['description'] or len(patent['description']) < 500:
+            print(f"  Skipping {patent['number']}: Description too short ({len(patent['description'])} chars)")
             return None  # Too short
         if not patent['claims']:
+            print(f"  Skipping {patent['number']}: No claims")
             return None  # No claims
         
+        print(f"  ✓ Valid patent: {patent['number']}")
         return patent
     
     def create_spec_docx(self, patent):
