@@ -356,16 +356,20 @@ class USPTOParser:
 
 def main():
     parser = argparse.ArgumentParser(description='Download and parse USPTO patents')
-    parser.add_argument('--week', required=True, help='Week to download (YYMMDD format, e.g., 241105)')
+    parser.add_argument('--week', help='Week to download (YYMMDD format, e.g., 241105)')
+    parser.add_argument('--zip-file', help='Path to existing ZIP file (skip download)')
     parser.add_argument('--count', type=int, default=2, help='Number of patents to process (default: 2 for testing)')
     parser.add_argument('--output', default='test_patents', help='Output directory (default: test_patents)')
     
     args = parser.parse_args()
     
+    if not args.week and not args.zip_file:
+        print("Error: Must specify either --week or --zip-file")
+        sys.exit(1)
+    
     print("=" * 60)
     print("USPTO Bulk Patent Download & Parser")
     print("=" * 60)
-    print(f"Week: {args.week}")
     print(f"Count: {args.count}")
     print(f"Output: {args.output}")
     print("=" * 60)
@@ -373,8 +377,15 @@ def main():
     # Initialize parser
     parser = USPTOParser(output_dir=args.output)
     
-    # Download ZIP
-    zip_path = parser.download_week(args.week)
+    # Get ZIP file (download or use existing)
+    if args.zip_file:
+        zip_path = Path(args.zip_file)
+        if not zip_path.exists():
+            print(f"✗ File not found: {args.zip_file}")
+            sys.exit(1)
+        print(f"Using existing ZIP: {zip_path}")
+    else:
+        zip_path = parser.download_week(args.week)
     
     # Parse patents (will stop after reaching count)
     patents = parser.parse_patents(zip_path, max_count=args.count * 2)  # Parse extra in case some are filtered
