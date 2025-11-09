@@ -1,33 +1,33 @@
 import React, { useState } from 'react';
-import { Mail, AlertCircle } from 'lucide-react';
+import { Lock, AlertCircle } from 'lucide-react';
 
 /**
  * AuthGate - Authentication Gateway for Hunt System
  * 
- * Uses render prop pattern to pass authenticated userEmail to child routes
+ * Uses password-based authentication
  * 
  * Usage in App.jsx:
  * <AuthGate>
- *   {(userEmail) => (
+ *   {(userIdentifier) => (
  *     <Routes>
- *       <Route path="/" element={<Dashboard userEmail={userEmail} />} />
+ *       <Route path="/" element={<Dashboard userEmail={userIdentifier} />} />
  *     </Routes>
  *   )}
  * </AuthGate>
  */
 export default function AuthGate({ children }) {
-  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
 
-  const AUTHORIZED_EMAILS = ['brad@trogonpatent.ai', 'laura@trogonpatent.ai'];
+  // Change this password to whatever you want
+  const CORRECT_PASSWORD = 'TrogonHunt2024!';
 
   const handleAuth = () => {
     setError('');
-    const normalizedEmail = email.toLowerCase().trim();
-
-    if (!AUTHORIZED_EMAILS.includes(normalizedEmail)) {
-      setError('Access denied. This email is not authorized to access the trogon hunt system.');
+    
+    if (password !== CORRECT_PASSWORD) {
+      setError('Incorrect password. Access denied.');
       return;
     }
 
@@ -54,18 +54,18 @@ export default function AuthGate({ children }) {
 
             <div className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-                  Email Address
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+                  Password
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAuth()}
-                    placeholder="your.email@example.com"
+                    placeholder="Enter password"
                     className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
@@ -94,6 +94,6 @@ export default function AuthGate({ children }) {
     );
   }
 
-  // Pass authenticated email to children via render prop
-  return typeof children === 'function' ? children(email) : children;
+  // Pass generic identifier to children (maintains compatibility with existing code)
+  return typeof children === 'function' ? children('admin') : children;
 }
