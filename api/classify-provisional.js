@@ -7,7 +7,7 @@
  * 
  * Cost: ~$0.03 per application
  * 
- * MODIFIED: Supports prompt variations for testing
+ * PRODUCTION VERSION: Uses anti-context prompt (51% excellent, 88% useful)
  */
 
 export default async function handler(req, res) {
@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { specText, title, applicationId, promptVariation } = req.body;
+    const { specText, title, applicationId } = req.body;
 
     // Validate input
     if (!specText || !title) {
@@ -29,12 +29,11 @@ export default async function handler(req, res) {
     console.log('Starting classification and POD extraction:', {
       applicationId,
       title,
-      textLength: specText.length,
-      promptVariation: promptVariation || 'baseline'
+      textLength: specText.length
     });
 
-    // Call Claude API with prompt variation
-    const claudeResponse = await callClaudeAPI(specText, title, promptVariation);
+    // Call Claude API with production prompt
+    const claudeResponse = await callClaudeAPI(specText, title);
 
     console.log('Claude raw response (first 200 chars):', claudeResponse.substring(0, 200));
 
@@ -135,16 +134,16 @@ function stripMarkdownCodeBlocks(text) {
 }
 
 /**
- * Call Claude API with prompt variation support
+ * Call Claude API with production anti-context prompt
  */
-async function callClaudeAPI(specText, title, promptVariation = 'baseline') {
+async function callClaudeAPI(specText, title) {
   const apiKey = process.env.CLAUDE_API_KEY;
   
   if (!apiKey) {
     throw new Error('CLAUDE_API_KEY not configured in environment variables');
   }
 
-  const prompt = buildTemplate2Prompt(specText, title, promptVariation);
+  const prompt = buildProductionPrompt(specText, title);
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -176,15 +175,20 @@ async function callClaudeAPI(specText, title, promptVariation = 'baseline') {
 }
 
 /**
- * Build updated prompt with variation support for testing
+ * Build production prompt with anti-context guidance
+ * 
+ * Performance (validated on 49 patents):
+ * - Excellent: 51%
+ * - Partial: 37%
+ * - Poor: 12%
+ * - Useful: 88%
  */
-function buildTemplate2Prompt(specText, title, promptVariation = 'baseline') {
+function buildProductionPrompt(specText, title) {
   const truncatedSpec = specText.length > 8000 
     ? specText.substring(0, 8000) + '\n\n[... specification truncated for API call ...]'
     : specText;
 
-  // Base prompt (current production)
-  const basePrompt = `You are a patent attorney analyzing a provisional patent specification to extract Points of Distinction (PODs) for prior art searching AND predict CPC classifications.
+  return `You are a patent attorney analyzing a provisional patent specification to extract Points of Distinction (PODs) for prior art searching AND predict CPC classifications.
 
 TASK: 
 1. Identify 3-5 Points of Distinction that differentiate this invention
@@ -202,41 +206,14 @@ A Point of Distinction is a technical feature, method step, or system component 
 2. Appears to be novel or non-obvious
 3. Contributes to solving the stated problem
 4. Can be used as a search term or filter
-5. Is specific enough to narrow search results`;
-
-  // Prompt variation additions (inserted after POD definition)
-  const variations = {
-    baseline: '',  // No addition - current production prompt
-    
-    mechanism: `
-
-CRITICAL POD EXTRACTION RULE:
-Describe the MECHANISM before the function. Focus on HOW it works, not WHAT it does.
-- Mechanical: Geometric relationships, linkage ratios, material interfaces
-- Software: Specific operations (divides X by Y), not high-level functions (processes data)
-- Ignore the application context (industry, use case). Focus only on the novel technical mechanism.`,
-
-    claim_style: `
-
-EXTRACT PODs AS IF WRITING PATENT CLAIMS:
-When describing each POD, use claim-style language:
-1. Start with the structure/component, not its purpose
-2. Use geometric terms (offset, ratio, angle) for mechanical features
-3. Use precise operations (calculates ratio of X/Y, extracts bits 4-7) for algorithms
-4. Avoid "the system does X" - instead say "component A configured to perform X"
-5. Distinguish the application domain from the novel mechanism`,
-
-    anti_context: `
+5. Is specific enough to narrow search results
 
 AVOID THESE COMMON POD EXTRACTION ERRORS:
 1. ❌ Describing application context instead of mechanism
    Example: "Agricultural steering" → ✅ "Pivot offset creating non-linear ratio"
 2. ❌ Gravitating to software when mechanical features exist - check for geometric novelty FIRST
 3. ❌ Functional language instead of structural
-4. When in doubt: Ask "Could I build this from the POD description alone?" If no, add structural detail`
-  };
-
-  const cpcAndFormatGuidance = `
+4. When in doubt: Ask "Could I build this from the POD description alone?" If no, add structural detail
 
 CPC CLASSIFICATION GUIDANCE:
 - Use the most specific CPC code possible (e.g., G06F 40/169, not just G06F)
@@ -267,9 +244,4 @@ CRITICAL:
 - Secondary CPCs must be relevant to THIS invention, not generic fallbacks
 - Output ONLY valid JSON - no markdown, no code blocks, no explanations
 - Your response must start with { and end with }`;
-
-  // Construct final prompt with variation
-  const variationText = variations[promptVariation] || variations.baseline;
-  
-  return basePrompt + variationText + cpcAndFormatGuidance;
 }
