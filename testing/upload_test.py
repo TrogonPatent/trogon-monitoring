@@ -1,219 +1,220 @@
+#!/usr/bin/env python3
 """
-Upload Test Patents to Trogon Hunt API
+Upload test patents to Trogon Hunt API with prompt variation support
 
 Usage:
-python upload_test.py --api-url https://monitoring.trogonpatent.ai --dir test_patents
+  python upload_test.py --count 25 --prompt-variation mechanism
+  python upload_test.py --api-url https://monitoring.trogonpatent.ai --count 20 --prompt-variation baseline
+
+Prompt variations:
+  baseline      - Current production prompt (no additions)
+  mechanism     - Mechanism-first guidance (geometric, structural focus)
+  claim_style   - Claim-style language guidance
+  anti_context  - Anti-context-bias guidance
 """
 
 import os
-import sys
 import json
 import time
-import requests
 import argparse
 from pathlib import Path
+import requests
+from docx import Document
 
-class TrogonUploader:
-    def __init__(self, api_url, test_dir):
-        self.api_url = api_url.rstrip('/')
-        self.test_dir = Path(test_dir)
-        self.results_dir = self.test_dir / "api_results"
-        self.results_dir.mkdir(exist_ok=True)
-        
-        print(f"API: {self.api_url}")
-        print(f"Test dir: {self.test_dir}")
+# Default API configuration
+DEFAULT_API_URL = 'https://monitoring.trogonpatent.ai'
+DEFAULT_RATE_LIMIT = 2  # seconds between requests
+
+def load_specification(spec_path):
+    """Load specification text from DOCX file"""
+    doc = Document(spec_path)
+    spec_text = '\n'.join([para.text for para in doc.paragraphs if para.text.strip()])
+    return spec_text
+
+def load_ground_truth(ground_truth_path):
+    """Load ground truth data (title, claims, CPCs)"""
+    with open(ground_truth_path, 'r') as f:
+        return json.load(f)
+
+def call_classify_api(api_url, spec_text, title, application_id, prompt_variation='baseline'):
+    """Call the classification API with prompt variation"""
+    endpoint = f"{api_url}/api/classify-provisional"
     
-    def load_manifest(self):
-        """Load processing manifest"""
-        manifest_path = self.test_dir / "processing_manifest.json"
-        
-        if not manifest_path.exists():
-            print(f"✗ Manifest not found: {manifest_path}")
-            print("Run download_and_parse.py first")
-            sys.exit(1)
-        
-        with open(manifest_path, 'r') as f:
-            manifest = json.load(f)
-        
-        print(f"✓ Loaded manifest: {len(manifest['processed'])} patents")
-        return manifest['processed']
+    payload = {
+        'specText': spec_text,
+        'title': title,
+        'applicationId': application_id,
+        'promptVariation': prompt_variation  # NEW: Pass variation to API
+    }
     
-    def upload_patent(self, patent_info):
-        """Upload single patent to API"""
-        patent_num = patent_info['patent_number']
-        spec_path = patent_info['spec_path']
+    try:
+        response = requests.post(endpoint, json=payload, timeout=60)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"  ❌ API call failed: {e}")
+        return None
+
+def save_api_result(result, output_path):
+    """Save API response to JSON file"""
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, 'w') as f:
+        json.dump(result, f, indent=2)
+
+def process_patent(patent_dir, api_url, prompt_variation, rate_limit):
+    """Process a single patent through the API"""
+    patent_name = os.path.basename(patent_dir)
+    
+    # Paths
+    spec_path = os.path.join(patent_dir, 'specifications', f'{patent_name}.docx')
+    ground_truth_path = os.path.join(patent_dir, 'ground_truth', f'{patent_name}.json')
+    api_result_path = os.path.join(patent_dir, 'api_results', f'{patent_name}.json')
+    
+    # Check if files exist
+    if not os.path.exists(spec_path):
+        print(f"  ⚠️  Specification not found: {spec_path}")
+        return False
+    
+    if not os.path.exists(ground_truth_path):
+        print(f"  ⚠️  Ground truth not found: {ground_truth_path}")
+        return False
+    
+    # Check if already processed
+    if os.path.exists(api_result_path):
+        print(f"  ⏭️  Already processed, skipping")
+        return True
+    
+    # Load data
+    try:
+        spec_text = load_specification(spec_path)
+        ground_truth = load_ground_truth(ground_truth_path)
+        title = ground_truth.get('title', 'Unknown Title')
         
-        print(f"\nUploading {patent_num}...")
+        print(f"  📄 Spec length: {len(spec_text)} chars")
+        print(f"  🎯 Prompt variation: {prompt_variation}")
         
-        try:
-            # Step 1: Upload file
-            with open(spec_path, 'rb') as f:
-                files = {'file': (f'{patent_num}-spec.docx', f, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')}
-                data = {
-                    'filingDate': '',
-                    'isPreFiling': 'true'
-                }
-                
-                response = requests.post(
-                    f"{self.api_url}/api/upload-provisional",
-                    files=files,
-                    data=data,
-                    timeout=60
-                )
-                
-                if response.status_code != 200:
-                    raise Exception(f"Upload failed: {response.status_code} - {response.text}")
-                
-                upload_data = response.json()
-                application_id = upload_data['id']
-                extracted_text = upload_data.get('extractedText', '')
-                
-                print(f"  ✓ Uploaded → App ID: {application_id}")
-            
-            # Step 2: Classify
-            time.sleep(1)  # Brief pause
-            
-            response = requests.post(
-                f"{self.api_url}/api/classify-provisional",
-                json={
-                    'specText': extracted_text,
-                    'title': upload_data.get('title', ''),
-                    'applicationId': application_id
-                },
-                headers={'Content-Type': 'application/json'},
-                timeout=120
-            )
-            
-            if response.status_code != 200:
-                raise Exception(f"Classification failed: {response.status_code} - {response.text}")
-            
-            classify_data = response.json()
-            
-            print(f"  ✓ Classified → Primary CPC: {classify_data.get('primaryCpc', 'N/A')}")
-            
-            # Step 3: Save to database
-            time.sleep(0.5)
-            
-            # Transform PODs to match save endpoint format
-            transformed_pods = []
-            for pod in classify_data.get('pods', []):
-                transformed_pods.append({
-                    'text': pod.get('pod_text', ''),
-                    'rationale': pod.get('rationale', ''),
-                    'isPrimary': pod.get('is_primary', False),
-                    'suggested': True
-                })
-            
-            save_payload = {
-                'applicationId': application_id,
-                'title': upload_data.get('title', ''),
-                'filingDate': None,
-                'isPreFiling': True,
-                'cpcPredictions': classify_data.get('cpcPredictions', []),
-                'primaryCpc': classify_data.get('primaryCpc', ''),
-                'technologyArea': classify_data.get('technologyArea', ''),
-                'approvedPods': transformed_pods
-            }
-            
-            response = requests.post(
-                f"{self.api_url}/api/save-provisional",
-                json=save_payload,
-                headers={'Content-Type': 'application/json'},
-                timeout=60
-            )
-            
-            if response.status_code != 200:
-                raise Exception(f"Save failed: {response.status_code} - {response.text}")
-            
-            save_data = response.json()
-            
-            print(f"  ✓ Saved to database → {save_data.get('summary', {}).get('podCount', 0)} PODs")
-            
+        # Call API
+        print(f"  🔄 Calling classification API...")
+        result = call_classify_api(api_url, spec_text, title, patent_name, prompt_variation)
+        
+        if result:
             # Save result
-            result = {
-                'patent_number': patent_num,
-                'application_id': application_id,
-                'upload_response': upload_data,
-                'classify_response': classify_data,
-                'save_response': save_data,
-                'timestamp': time.time()
-            }
+            save_api_result(result, api_result_path)
             
-            result_path = self.results_dir / f"{patent_num}-result.json"
-            with open(result_path, 'w') as f:
-                json.dump(result, f, indent=2)
-            
-            return result
-            
-        except Exception as e:
-            print(f"  ✗ Error: {e}")
-            return {
-                'patent_number': patent_num,
-                'error': str(e),
-                'timestamp': time.time()
-            }
-    
-    def upload_all(self, patents, rate_limit=2.0):
-        """Upload all patents with rate limiting"""
-        results = []
-        errors = []
-        
-        total = len(patents)
-        
-        for i, patent in enumerate(patents, 1):
-            print(f"\n[{i}/{total}]", end=' ')
-            
-            result = self.upload_patent(patent)
-            
-            if 'error' in result:
-                errors.append(result)
+            if result.get('success'):
+                print(f"  ✅ Success! PODs: {len(result.get('pods', []))}, Primary CPC: {result.get('primaryCpc', 'N/A')}")
             else:
-                results.append(result)
+                print(f"  ⚠️  API returned error: {result.get('error', 'Unknown error')}")
             
             # Rate limiting
-            if i < total:
-                time.sleep(rate_limit)
-        
-        # Save summary
-        summary = {
-            'total': total,
-            'successful': len(results),
-            'failed': len(errors),
-            'results': results,
-            'errors': errors
-        }
-        
-        summary_path = self.results_dir / "upload_summary.json"
-        with open(summary_path, 'w') as f:
-            json.dump(summary, f, indent=2)
-        
-        print("\n" + "=" * 60)
-        print(f"✓ Upload complete")
-        print(f"  Successful: {len(results)}/{total}")
-        print(f"  Failed: {len(errors)}/{total}")
-        print(f"  Results saved: {self.results_dir}")
-        
-        return summary
+            time.sleep(rate_limit)
+            return True
+        else:
+            print(f"  ❌ API call failed")
+            return False
+            
+    except Exception as e:
+        print(f"  ❌ Error processing patent: {e}")
+        return False
 
 def main():
-    parser = argparse.ArgumentParser(description='Upload patents to Trogon Hunt API')
-    parser.add_argument('--api-url', required=True, help='API base URL')
-    parser.add_argument('--dir', default='test_patents', help='Test directory')
-    parser.add_argument('--rate-limit', type=float, default=2.0, help='Seconds between uploads (default: 2)')
+    parser = argparse.ArgumentParser(
+        description='Upload test patents to Trogon Hunt API with prompt variation support'
+    )
+    parser.add_argument(
+        '--api-url',
+        default=DEFAULT_API_URL,
+        help=f'API base URL (default: {DEFAULT_API_URL})'
+    )
+    parser.add_argument(
+        '--dir',
+        default='test_patents',
+        help='Directory containing test patents (default: test_patents)'
+    )
+    parser.add_argument(
+        '--count',
+        type=int,
+        help='Number of patents to process (default: all)'
+    )
+    parser.add_argument(
+        '--rate-limit',
+        type=float,
+        default=DEFAULT_RATE_LIMIT,
+        help=f'Seconds to wait between API calls (default: {DEFAULT_RATE_LIMIT})'
+    )
+    parser.add_argument(
+        '--prompt-variation',
+        choices=['baseline', 'mechanism', 'claim_style', 'anti_context'],
+        default='baseline',
+        help='Prompt variation to test (default: baseline)'
+    )
+    parser.add_argument(
+        '--output-dir',
+        help='Optional: Override test_patents directory for this run (e.g., test_mechanism)'
+    )
     
     args = parser.parse_args()
     
-    print("=" * 60)
-    print("Trogon Hunt API Upload Test")
-    print("=" * 60)
+    # Determine test directory
+    if args.output_dir:
+        test_dir = args.output_dir
+        # Create directory structure
+        os.makedirs(test_dir, exist_ok=True)
+        os.makedirs(os.path.join(test_dir, 'api_results'), exist_ok=True)
+        print(f"\n📁 Output directory: {test_dir}")
+    else:
+        test_dir = args.dir
     
-    uploader = TrogonUploader(args.api_url, args.dir)
-    manifest = uploader.load_manifest()
+    # Find all patent directories
+    spec_dir = os.path.join(test_dir, 'specifications')
     
-    # Upload all
-    summary = uploader.upload_all(manifest, rate_limit=args.rate_limit)
+    if not os.path.exists(spec_dir):
+        print(f"❌ Specifications directory not found: {spec_dir}")
+        print(f"   Make sure you've run download_and_parse.py first")
+        return
     
-    print("\nNext step: Run validate_all.py to compare results")
+    # Get list of patents
+    patent_files = [f for f in os.listdir(spec_dir) if f.endswith('.docx')]
+    patent_names = [os.path.splitext(f)[0] for f in patent_files]
+    
+    if not patent_names:
+        print(f"❌ No patents found in {spec_dir}")
+        return
+    
+    # Limit count if specified
+    if args.count:
+        patent_names = patent_names[:args.count]
+    
+    print(f"\n🧪 Trogon Hunt API Test - Prompt Variation: {args.prompt_variation.upper()}")
+    print(f"=" * 70)
+    print(f"API URL: {args.api_url}")
+    print(f"Test directory: {test_dir}")
+    print(f"Patents to process: {len(patent_names)}")
+    print(f"Rate limit: {args.rate_limit} seconds")
+    print(f"Prompt variation: {args.prompt_variation}")
+    print(f"=" * 70)
+    
+    # Process each patent
+    success_count = 0
+    fail_count = 0
+    
+    for i, patent_name in enumerate(patent_names, 1):
+        print(f"\n[{i}/{len(patent_names)}] Processing {patent_name}...")
+        
+        if process_patent(test_dir, args.api_url, args.prompt_variation, args.rate_limit):
+            success_count += 1
+        else:
+            fail_count += 1
+    
+    # Summary
+    print(f"\n" + "=" * 70)
+    print(f"📊 Upload Complete - Prompt Variation: {args.prompt_variation.upper()}")
+    print(f"=" * 70)
+    print(f"✅ Successful: {success_count}")
+    print(f"❌ Failed: {fail_count}")
+    print(f"📁 Results saved to: {test_dir}/api_results/")
+    print(f"\nNext step:")
+    print(f"  python detailed_pod_analysis.py --dir {test_dir} --output {args.prompt_variation}_results.md")
 
 if __name__ == '__main__':
     main()
