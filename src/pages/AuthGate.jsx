@@ -76,7 +76,7 @@ export default function AuthGate({ children }) {
           
           <form onSubmit={handleAuth}>
 <div style={{ marginBottom: '20px', marginTop: '0' }}>
-              <label style={{ display: 'block', marginBottom: '8px', marginTop: '0', fontWeight: '500' }}>
+              <label style={{ display: 'block', marginBottom: '8px', marginTop: '0', fontWeight: '500', lineHeight: '1'}}>
                 Enter Passcode
               </label>
               <div style={{ position: 'relative', marginTop: '0' }}>
@@ -157,6 +157,7 @@ export default function AuthGate({ children }) {
             marginBottom: '0', 
             padding: '10px',
             fontSize: '12px',
+             lineHeight: '1.4',
             color: '#666',
             backgroundColor: '#f9f9f9',
             borderRadius: '4px',
