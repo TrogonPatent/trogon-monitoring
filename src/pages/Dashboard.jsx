@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Calendar, Code, AlertCircle, Plus, Trash2 } from 'lucide-react';
 
-export default function Dashboard() {
+export default function Dashboard({ onLogout }) {
   const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -103,13 +103,21 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold text-gray-900">trogon hunt</h1>
               <p className="text-gray-600 mt-1">Prior Art Search</p>
             </div>
-            <button
-              onClick={() => navigate('/provisional/new')}
-              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Add New Provisional Patent Data
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/provisional/new')}
+                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                Add New Provisional Patent Data
+              </button>
+              <button
+                onClick={onLogout}
+                className="px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </div>
