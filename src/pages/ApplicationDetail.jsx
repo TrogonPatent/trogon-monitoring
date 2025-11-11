@@ -13,7 +13,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 
-export default function ApplicationDetail() {
+export default function ApplicationDetail({ onLogout }) {
   const { id } = useParams();
   const navigate = useNavigate();
   
@@ -124,13 +124,21 @@ export default function ApplicationDetail() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Dashboard
-          </button>
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back to Dashboard
+            </button>
+            <button
+              onClick={onLogout}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
           
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
