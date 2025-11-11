@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
  * Multiple files + DOCX support + Real APIs
  */
 
-export default function ProvisionalUpload() {
+export default function ProvisionalUpload({ onLogout }) {
   const navigate = useNavigate();
   
   // Form state
@@ -290,15 +290,23 @@ export default function ProvisionalUpload() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-6 py-4">
-          <button
-            onClick={() => navigate('/')}
-            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span className="font-medium">Back to Dashboard</span>
-          </button>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate('/')}
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="font-medium">Back to Dashboard</span>
+            </button>
+            <button
+              onClick={onLogout}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
 
