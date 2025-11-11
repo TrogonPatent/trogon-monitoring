@@ -70,7 +70,7 @@ export default function AuthGate({ children }) {
    boxSizing: 'border-box', 
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
 }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '30px', textAlign: 'center' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginTop: '0', marginBottom: '30px', textAlign: 'center' }}>
             trogon Hunt
           </h1>
           
