@@ -19,8 +19,8 @@ import { AlertCircle } from 'lucide-react';
  * </AuthGate>
  */
 export default function AuthGate({ children }) {
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [passcode, setPasscode] = useState('');
+  const [showPasscode, setShowPasscode] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,8 +33,8 @@ export default function AuthGate({ children }) {
     setLoading(true);
     setError('');
     
-    if (password !== CORRECT_PASSWORD) {
-      setError('Incorrect password. Access denied.');
+    if (passcode !== CORRECT_PASSWORD) {
+      setError('Invalid passcode');
       setLoading(false);
       return;
     }
@@ -45,7 +45,7 @@ export default function AuthGate({ children }) {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    setPassword('');
+    setPasscode('');
     setError('');
   };
 
@@ -67,38 +67,21 @@ export default function AuthGate({ children }) {
           width: '100%',
           maxWidth: '400px'
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <div style={{ 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              width: '120px', 
-              height: '120px', 
-              marginBottom: '16px' 
-            }}>
-              <img 
-                src="/binoculars-icon.png" 
-                alt="Binoculars" 
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              />
-            </div>
-            <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' }}>
-              trogon hunt
-            </h1>
-            <p style={{ color: '#666' }}>Prior Art Search</p>
-          </div>
+          <h1 style={{ marginBottom: '30px', textAlign: 'center' }}>
+            trogon hunt
+          </h1>
           
           <form onSubmit={handleAuth}>
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-                Password
+                Enter Passcode
               </label>
               <div style={{ position: 'relative' }}>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
+                  type={showPasscode ? 'text' : 'password'}
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
+                  placeholder="Enter passcode"
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -113,7 +96,7 @@ export default function AuthGate({ children }) {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPasscode(!showPasscode)}
                   style={{
                     position: 'absolute',
                     right: '10px',
@@ -125,18 +108,11 @@ export default function AuthGate({ children }) {
                     fontSize: '18px',
                     padding: '5px'
                   }}
-                  title={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPasscode ? 'Hide passcode' : 'Show passcode'}
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPasscode ? '🙈' : '👁️'}
                 </button>
               </div>
-              <p style={{ 
-                marginTop: '8px', 
-                fontSize: '12px', 
-                color: '#666' 
-              }}>
-                Access restricted to authorized users
-              </p>
             </div>
 
             {error && (
@@ -146,13 +122,9 @@ export default function AuthGate({ children }) {
                 padding: '10px',
                 backgroundColor: '#f8d7da',
                 borderRadius: '4px',
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'start',
-                gap: '8px'
+                fontSize: '14px'
               }}>
-                <AlertCircle style={{ width: '16px', height: '16px', flexShrink: 0, marginTop: '2px' }} />
-                <span>{error}</span>
+                {error}
               </div>
             )}
 
@@ -171,7 +143,7 @@ export default function AuthGate({ children }) {
                 cursor: loading ? 'not-allowed' : 'pointer'
               }}
             >
-              {loading ? 'Verifying...' : 'Access'}
+              {loading ? 'Verifying...' : 'Access System'}
             </button>
           </form>
 
@@ -184,7 +156,7 @@ export default function AuthGate({ children }) {
             borderRadius: '4px',
             textAlign: 'center'
           }}>
-            Click the eye icon to show/hide your password
+            Click the eye icon to show/hide your passcode
           </div>
         </div>
       </div>
