@@ -4,19 +4,23 @@ import { Lock, AlertCircle } from 'lucide-react';
 /**
  * AuthGate - Authentication Gateway for Hunt System
  * 
- * Uses password-based authentication
+ * Uses password-based authentication with visibility toggle
  * 
  * Usage in App.jsx:
  * <AuthGate>
- *   {(userIdentifier) => (
- *     <Routes>
- *       <Route path="/" element={<Dashboard userEmail={userIdentifier} />} />
- *     </Routes>
+ *   {(userIdentifier, handleLogout) => (
+ *     <div>
+ *       <button onClick={handleLogout}>Logout</button>
+ *       <Routes>
+ *         <Route path="/" element={<Dashboard userEmail={userIdentifier} />} />
+ *       </Routes>
+ *     </div>
  *   )}
  * </AuthGate>
  */
 export default function AuthGate({ children }) {
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
 
@@ -32,6 +36,12 @@ export default function AuthGate({ children }) {
     }
 
     setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setPassword('');
+    setError('');
   };
 
   // Show auth form if not authenticated
@@ -61,13 +71,21 @@ export default function AuthGate({ children }) {
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
                     id="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAuth()}
                     placeholder="Enter password"
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full pl-10 pr-12 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors text-xl"
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? '🙈' : '👁️'}
+                  </button>
                 </div>
                 <p className="mt-2 text-xs text-slate-500">
                   Access restricted to authorized users
@@ -94,6 +112,6 @@ export default function AuthGate({ children }) {
     );
   }
 
-  // Pass generic identifier to children (maintains compatibility with existing code)
-  return typeof children === 'function' ? children('admin') : children;
+  // Pass identifier and logout function to children
+  return typeof children === 'function' ? children('admin', handleLogout) : children;
 }
