@@ -66,7 +66,8 @@ export default function AuthGate({ children }) {
   borderRadius: '8px',
   boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
   width: '100%',
-  maxWidth: '400px',       
+  maxWidth: '400px',
+   boxSizing: 'border-box', 
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
 }}>
           <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '30px', textAlign: 'center' }}>
