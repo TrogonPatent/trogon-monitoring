@@ -59,14 +59,15 @@ export default function AuthGate({ children }) {
         justifyContent: 'center',
         backgroundColor: '#f5f5f5'
       }}>
-        <div style={{
-          backgroundColor: 'white',
-          padding: '40px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-          width: '100%',
-          maxWidth: '400px'
-        }}>
+<div style={{
+  backgroundColor: 'white',
+  padding: '40px',
+  borderRadius: '8px',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+  width: '100%',
+  maxWidth: '400px',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
+}}>
           <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '30px', textAlign: 'center' }}>
             trogon Hunt
           </h1>
