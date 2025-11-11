@@ -70,13 +70,13 @@ export default function AuthGate({ children }) {
    boxSizing: 'border-box', 
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
 }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginTop: '0', marginBottom: '30px', textAlign: 'center' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginTop: '0', marginBottom: '30px',  lineHeight: '1.2', textAlign: 'center' }}>
             trogon Hunt
           </h1>
           
           <form onSubmit={handleAuth}>
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+              <label style={{ display: 'block', marginBottom: '8px', marginTop: '0', fontWeight: '500' }}>
                 Enter Passcode
               </label>
               <div style={{ position: 'relative' }}>
