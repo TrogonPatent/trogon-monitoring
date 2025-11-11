@@ -90,10 +90,12 @@ export default function AuthGate({ children }) {
                     padding: '12px',
                     paddingRight: '45px',
                     fontSize: '16px',
+                    lineHeight: '1.5',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
                     boxSizing: 'border-box',
-                    fontFamily: 'monospace'
+                    fontFamily: 'monospace',
+                    height: '48px' 
                   }}
                   required
                 />
@@ -139,6 +141,8 @@ export default function AuthGate({ children }) {
                 padding: '12px',
                 fontSize: '16px',
                 fontWeight: '500',
+                lineHeight: '1.5', 
+                height: '48px',
                 backgroundColor: loading ? '#ccc' : '#0070f3',
                 color: 'white',
                 border: 'none',
