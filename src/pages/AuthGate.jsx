@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 /**
  * AuthGate - Authentication Gateway for Hunt System
@@ -23,19 +23,24 @@ export default function AuthGate({ children }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // Change this password to whatever you want
   const CORRECT_PASSWORD = 'TrogonHunt2024!';
 
-  const handleAuth = () => {
+  const handleAuth = (e) => {
+    e.preventDefault();
+    setLoading(true);
     setError('');
     
     if (password !== CORRECT_PASSWORD) {
       setError('Incorrect password. Access denied.');
+      setLoading(false);
       return;
     }
 
     setIsAuthenticated(true);
+    setLoading(false);
   };
 
   const handleLogout = () => {
@@ -47,65 +52,139 @@ export default function AuthGate({ children }) {
   // Show auth form if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4">
-        <div className="max-w-md w-full">
-          <div className="bg-white rounded-lg shadow-2xl p-8">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-40 h-40 mb-4">
-                <img 
-                  src="/binoculars-icon.png" 
-                  alt="Binoculars" 
-                  className="w-full h-full object-contain"
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f5f5f5'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          padding: '40px',
+          borderRadius: '8px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          width: '100%',
+          maxWidth: '400px'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <div style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              width: '120px', 
+              height: '120px', 
+              marginBottom: '16px' 
+            }}>
+              <img 
+                src="/binoculars-icon.png" 
+                alt="Binoculars" 
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            </div>
+            <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' }}>
+              trogon hunt
+            </h1>
+            <p style={{ color: '#666' }}>Prior Art Search</p>
+          </div>
+          
+          <form onSubmit={handleAuth}>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    paddingRight: '45px',
+                    fontSize: '16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    boxSizing: 'border-box',
+                    fontFamily: 'monospace'
+                  }}
+                  required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    padding: '5px'
+                  }}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
               </div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">trogon hunt</h1>
-              <p className="text-slate-600">Prior Art Search</p>
+              <p style={{ 
+                marginTop: '8px', 
+                fontSize: '12px', 
+                color: '#666' 
+              }}>
+                Access restricted to authorized users
+              </p>
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAuth()}
-                    placeholder="Enter password"
-                    className="w-full pl-10 pr-12 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors text-xl"
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? '🙈' : '👁️'}
-                  </button>
-                </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  Access restricted to authorized users
-                </p>
+            {error && (
+              <div style={{
+                color: '#dc3545',
+                marginBottom: '20px',
+                padding: '10px',
+                backgroundColor: '#f8d7da',
+                borderRadius: '4px',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'start',
+                gap: '8px'
+              }}>
+                <AlertCircle style={{ width: '16px', height: '16px', flexShrink: 0, marginTop: '2px' }} />
+                <span>{error}</span>
               </div>
+            )}
 
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '16px',
+                fontWeight: '500',
+                backgroundColor: loading ? '#ccc' : '#0070f3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loading ? 'Verifying...' : 'Access'}
+            </button>
+          </form>
 
-              <button
-                onClick={handleAuth}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                Access
-              </button>
-            </div>
+          <div style={{
+            marginTop: '20px',
+            padding: '10px',
+            fontSize: '12px',
+            color: '#666',
+            backgroundColor: '#f9f9f9',
+            borderRadius: '4px',
+            textAlign: 'center'
+          }}>
+            Click the eye icon to show/hide your password
           </div>
         </div>
       </div>
