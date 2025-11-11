@@ -67,8 +67,8 @@ export default function AuthGate({ children }) {
           width: '100%',
           maxWidth: '400px'
         }}>
-          <h1 style={{ marginBottom: '30px', textAlign: 'center' }}>
-            trogon hunt
+          <h1 style={{ fontSize: '32px', marginBottom: '30px', textAlign: 'center' }}>
+            trogon Hunt
           </h1>
           
           <form onSubmit={handleAuth}>
