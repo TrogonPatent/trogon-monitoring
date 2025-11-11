@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AuthGate from './pages/AuthGate';
 import Dashboard from './pages/Dashboard';
 import NewProvisionalPage from './pages/NewProvisionalPage';
@@ -12,28 +12,22 @@ import ApplicationDetail from './pages/ApplicationDetail';
  * Routes:
  * - / → Hunt dashboard (direct after auth)
  * - /provisional/new → Upload new provisional (Phase A)
- * - /application/:id → Application detail view (NEW)
+ * - /application/:id → Application detail view
  */
 function App() {
   return (
     <BrowserRouter>
       <AuthGate>
-        {(userEmail) => (
+        {(userEmail, handleLogout) => (
           <Routes>
             {/* Root goes directly to Hunt dashboard */}
-            <Route path="/" element={<Dashboard userEmail={userEmail} />} />
+            <Route path="/" element={<Dashboard userEmail={userEmail} onLogout={handleLogout} />} />
             
             {/* Hunt System Routes */}
-            <Route path="/provisional/new" element={<NewProvisionalPage userEmail={userEmail} />} />
+            <Route path="/provisional/new" element={<NewProvisionalPage userEmail={userEmail} onLogout={handleLogout} />} />
             
-            {/* Application Detail - NEW */}
-            <Route path="/application/:id" element={<ApplicationDetail userEmail={userEmail} />} />
-            
-            {/* Future Hunt routes - uncomment as you build them */}
-            {/* <Route path="/hunt/provisional/:id/search" element={<PodSearch userEmail={userEmail} />} /> */}
-            {/* <Route path="/hunt/provisional/:id/classify" element={<ClassificationValidation userEmail={userEmail} />} /> */}
-            {/* <Route path="/hunt/provisional/:id/threshold" element={<ThresholdSelection userEmail={userEmail} />} /> */}
-            {/* <Route path="/hunt/provisional/:id/monitoring" element={<MonitoringDashboard userEmail={userEmail} />} /> */}
+            {/* Application Detail */}
+            <Route path="/application/:id" element={<ApplicationDetail userEmail={userEmail} onLogout={handleLogout} />} />
             
             {/* 404 catch-all */}
             <Route path="*" element={<NotFound />} />
