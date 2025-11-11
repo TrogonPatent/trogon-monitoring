@@ -75,11 +75,11 @@ export default function AuthGate({ children }) {
           </h1>
           
           <form onSubmit={handleAuth}>
-            <div style={{ marginBottom: '20px' }}>
+<div style={{ marginBottom: '20px', marginTop: '0' }}>
               <label style={{ display: 'block', marginBottom: '8px', marginTop: '0', fontWeight: '500' }}>
                 Enter Passcode
               </label>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', marginTop: '0' }}>
                 <input
                   type={showPasscode ? 'text' : 'password'}
                   value={passcode}
@@ -143,7 +143,9 @@ export default function AuthGate({ children }) {
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: loading ? 'not-allowed' : 'pointer'
+                cursor: loading ? 'not-allowed' : 'pointer',
+                marginTop: '0',       
+                marginBottom: '0'
               }}
             >
               {loading ? 'Verifying...' : 'Access System'}
@@ -152,6 +154,7 @@ export default function AuthGate({ children }) {
 
           <div style={{
             marginTop: '20px',
+            marginBottom: '0', 
             padding: '10px',
             fontSize: '12px',
             color: '#666',
