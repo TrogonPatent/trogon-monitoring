@@ -1,32 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 
 /**
  * AuthGate - Authentication Gateway for Hunt System
- * 
- * Uses password-based authentication with visibility toggle
- * 
- * Usage in App.jsx:
- * <AuthGate>
- *   {(userIdentifier, handleLogout) => (
- *     <div>
- *       <button onClick={handleLogout}>Logout</button>
- *       <Routes>
- *         <Route path="/" element={<Dashboard userEmail={userIdentifier} />} />
- *       </Routes>
- *     </div>
- *   )}
- * </AuthGate>
+ * WITH LOCALSTORAGE PERSISTENCE - Survives page refresh!
  */
 export default function AuthGate({ children }) {
   const [passcode, setPasscode] = useState('');
   const [showPasscode, setShowPasscode] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Change this password to whatever you want
   const CORRECT_PASSWORD = 'TrogonHunt2024!';
+
+  // Check localStorage on mount
+  useEffect(() => {
+    const savedAuth = localStorage.getItem('hunt-auth');
+    if (savedAuth === 'true') {
+      setIsAuthenticated(true);
+    }
+    setLoading(false);
+  }, []);
 
   const handleAuth = (e) => {
     e.preventDefault();
@@ -39,15 +34,33 @@ export default function AuthGate({ children }) {
       return;
     }
 
+    // Save to localStorage - this persists across refreshes!
+    localStorage.setItem('hunt-auth', 'true');
     setIsAuthenticated(true);
     setLoading(false);
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('hunt-auth');
     setIsAuthenticated(false);
     setPasscode('');
     setError('');
   };
+
+  // Show loading while checking localStorage
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f5f5f5'
+      }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   // Show auth form if not authenticated
   if (!isAuthenticated) {
@@ -59,23 +72,23 @@ export default function AuthGate({ children }) {
         justifyContent: 'center',
         backgroundColor: '#f5f5f5'
       }}>
-<div style={{
-  backgroundColor: 'white',
-  padding: '40px',    
-    minHeight: '360px', 
-  borderRadius: '8px',
-  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-  width: '100%',
-  maxWidth: '400px',
-   boxSizing: 'border-box', 
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
-}}>
+        <div style={{
+          backgroundColor: 'white',
+          padding: '40px',    
+          minHeight: '360px', 
+          borderRadius: '8px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          width: '100%',
+          maxWidth: '400px',
+          boxSizing: 'border-box', 
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
+        }}>
           <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginTop: '0', marginBottom: '30px',  lineHeight: '1.2', textAlign: 'center' }}>
             trogon Hunt
           </h1>
           
           <form onSubmit={handleAuth}>
-<div style={{ marginBottom: '20px', marginTop: '0' }}>
+            <div style={{ marginBottom: '20px', marginTop: '0' }}>
               <label style={{ display: 'block', marginBottom: '8px', marginTop: '0', fontWeight: '500', lineHeight: '1'}}>
                 Enter Passcode
               </label>
@@ -161,7 +174,7 @@ export default function AuthGate({ children }) {
             marginBottom: '0', 
             padding: '10px',
             fontSize: '12px',
-             lineHeight: '1.4',
+            lineHeight: '1.4',
             color: '#666',
             backgroundColor: '#f9f9f9',
             borderRadius: '4px',
@@ -174,6 +187,5 @@ export default function AuthGate({ children }) {
     );
   }
 
-  // Pass identifier and logout function to children
   return typeof children === 'function' ? children('admin', handleLogout) : children;
 }
