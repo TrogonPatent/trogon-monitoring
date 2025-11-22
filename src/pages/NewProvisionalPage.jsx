@@ -463,35 +463,24 @@ export default function ProvisionalUpload({ onLogout }) {
                 Filing Date <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               
-              <div className="mb-3">
+             <div className="mb-3">
                 <label className="inline-flex items-center cursor-pointer">
                   <input
-                          type="checkbox"
-                          checked={!!isApproved}
-                          onChange={() => togglePodApproval(pod.id)}
-                          className="mt-1 h-5 w-5 text-blue-600"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            {isApproved && (
-                              <button
-                                type="button"
-                                onClick={() => setPrimaryPodId(pod.id)}
-                                className={`text-xs px-2 py-1 rounded ${
-                                  primaryPodId === pod.id 
-                                    ? 'bg-green-500 text-white' 
-                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                                }`}
-                              >
-                                {primaryPodId === pod.id ? '★ Primary' : 'Set Primary'}
-                              </button>
-                            )}
-                            {pod.isPrimary && (
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                AI Suggested
-                              </span>
-                            )}
-                          </div>
+                    type="checkbox"
+                    checked={isPreFiling}
+                    onChange={(e) => {
+                      setIsPreFiling(e.target.checked);
+                      if (e.target.checked) {
+                        setFilingDate('');
+                      }
+                    }}
+                    className="h-4 w-4 text-blue-600 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    This is pre-filing (not yet filed with USPTO)
+                  </span>
+                </label>
+              </div>
 
               {!isPreFiling && (
                 <div>
