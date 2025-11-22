@@ -87,7 +87,12 @@ export default async function handler(req, res) {
       confidence -= 0.06;
     }
 
+    // Generate title from primary POD (fallback to Claude-generated or truncate POD)
+    const generatedTitle = result.generated_title || 
+      (result.pods.find(p => p.is_primary)?.pod_text.substring(0, 50) || 'Untitled Application');
+
     console.log('Classification and POD extraction successful:', {
+      generatedTitle,
       primaryCpc,
       technologyArea,
       podCount: result.pods.length,
@@ -97,6 +102,7 @@ export default async function handler(req, res) {
     // Return combined results
     return res.status(200).json({
       success: true,
+      generatedTitle,
       primaryCpc,
       technologyArea,
       cpcPredictions,
@@ -223,6 +229,7 @@ CPC CLASSIFICATION GUIDANCE:
 
 FORMAT YOUR RESPONSE AS JSON:
 {
+  "generated_title": "Short descriptive title (max 50 characters) based on the primary POD",
   "pods": [
     {
       "pod_text": "The system uses machine learning to analyze patent claims in real-time during mobile filing, automatically suggesting amendments based on prior art similarity scores.",
@@ -238,6 +245,12 @@ FORMAT YOUR RESPONSE AS JSON:
     "H04L 51/00"
   ]
 }
+
+TITLE GENERATION RULES:
+- Create a concise title (max 50 characters) that captures the primary invention concept
+- Base it on the primary POD's core technical feature
+- Use title case (e.g., "ML-Powered Mobile Patent Filing System")
+- Avoid generic words like "System", "Method", "Apparatus" alone
 
 CRITICAL: 
 - Use specific CPC codes with proper formatting (include the space and slash)
