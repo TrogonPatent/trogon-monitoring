@@ -27,6 +27,7 @@ export default function ProvisionalUpload({ onLogout }) {
   const [technologyArea, setTechnologyArea] = useState('');
   const [suggestedPods, setSuggestedPods] = useState([]);
   const [approvedPods, setApprovedPods] = useState([]);
+  const [primaryPodId, setPrimaryPodId] = useState(null);
   const [applicationId, setApplicationId] = useState(null);
 
   // Handle file selection - MULTIPLE FILES + DOCX
@@ -46,8 +47,23 @@ export default function ProvisionalUpload({ onLogout }) {
       return;
     }
 
-    setFiles(selectedFiles);
+    // Aggregate files, dedupe by name, max 10
+    setFiles(prev => {
+      const existingNames = new Set(prev.map(f => f.name));
+      const newFiles = selectedFiles.filter(f => !existingNames.has(f.name));
+      const combined = [...prev, ...newFiles];
+      if (combined.length > 10) {
+        setError('Maximum 10 files allowed');
+        return combined.slice(0, 10);
+      }
+      return combined;
+    });
     setError(null);
+  };
+
+  // Remove individual file
+  const removeFile = (fileName) => {
+    setFiles(prev => prev.filter(f => f.name !== fileName));
   };
 
   // Handle drag and drop
@@ -68,7 +84,17 @@ export default function ProvisionalUpload({ onLogout }) {
       return;
     }
     
-    setFiles(droppedFiles);
+    // Aggregate files, dedupe by name, max 10
+    setFiles(prev => {
+      const existingNames = new Set(prev.map(f => f.name));
+      const newFiles = droppedFiles.filter(f => !existingNames.has(f.name));
+      const combined = [...prev, ...newFiles];
+      if (combined.length > 10) {
+        setError('Maximum 10 files allowed');
+        return combined.slice(0, 10);
+      }
+      return combined;
+    });
     setError(null);
   };
 
@@ -179,6 +205,13 @@ export default function ProvisionalUpload({ onLogout }) {
 
       setSuggestedPods(transformedPods);
       setApprovedPods(transformedPods.filter(p => p.isPrimary));
+      // Set initial primary to AI-suggested primary
+      const aiPrimary = transformedPods.find(p => p.isPrimary);
+      if (aiPrimary) setPrimaryPodId(aiPrimary.id);
+      
+      // Use AI-generated title
+      if (data.generatedTitle) setTitle(data.generatedTitle);
+      
       setIsProcessing(false);
       setStep('review');
 
@@ -211,6 +244,8 @@ export default function ProvisionalUpload({ onLogout }) {
 
     if (approvedPods.find(p => p.id === podId)) {
       setApprovedPods(approvedPods.filter(p => p.id !== podId));
+      // If removing the primary, clear primary selection
+      if (primaryPodId === podId) setPrimaryPodId(null);
     } else {
       setApprovedPods([...approvedPods, pod]);
     }
@@ -392,20 +427,34 @@ export default function ProvisionalUpload({ onLogout }) {
                       PDF, DOCX, or TXT • Multiple files OK • 25MB total
                     </p>
                     {files.length > 0 && (
-                      <div className="text-xs text-blue-600 font-medium mt-2">
-                        <p className="mb-1">✓ Files selected:</p>
-                        <ul className="space-y-1 text-left max-w-xs mx-auto">
-                          {files.map((f, i) => (
-                            <li key={i} className="truncate">• {f.name} ({(f.size / 1024).toFixed(0)} KB)</li>
-                          ))}
-                        </ul>
-                      </div>
+                      <p className="text-xs text-blue-600 font-medium mt-2">
+                        ✓ {files.length} file{files.length > 1 ? 's' : ''} selected (see below)
+                      </p>
                     )}
                   </div>
                 </label>
               </div>
+              {files.length > 0 && (
+                <div className="mt-3 border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Selected files ({files.length}/10):</p>
+                  <ul className="space-y-1">
+                    {files.map((f, i) => (
+                      <li key={i} className="flex items-center justify-between text-xs">
+                        <span className="truncate flex-1 mr-2">{f.name} ({(f.size / 1024).toFixed(0)} KB)</span>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removeFile(f.name); }}
+                          className="text-red-500 hover:text-red-700 font-medium px-2"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <p className="mt-2 text-xs text-gray-500">
-                Upload spec + drawings together. Title will be auto-generated from content.
+                Upload spec + drawings together. Title will be auto-generated from AI.
               </p>
             </div>
 
@@ -417,21 +466,32 @@ export default function ProvisionalUpload({ onLogout }) {
               <div className="mb-3">
                 <label className="inline-flex items-center cursor-pointer">
                   <input
-                    type="checkbox"
-                    checked={isPreFiling}
-                    onChange={(e) => {
-                      setIsPreFiling(e.target.checked);
-                      if (e.target.checked) {
-                        setFilingDate('');
-                      }
-                    }}
-                    className="h-4 w-4 text-blue-600 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    This is pre-filing (not yet filed with USPTO)
-                  </span>
-                </label>
-              </div>
+                          type="checkbox"
+                          checked={!!isApproved}
+                          onChange={() => togglePodApproval(pod.id)}
+                          className="mt-1 h-5 w-5 text-blue-600"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {isApproved && (
+                              <button
+                                type="button"
+                                onClick={() => setPrimaryPodId(pod.id)}
+                                className={`text-xs px-2 py-1 rounded ${
+                                  primaryPodId === pod.id 
+                                    ? 'bg-green-500 text-white' 
+                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                }`}
+                              >
+                                {primaryPodId === pod.id ? '★ Primary' : 'Set Primary'}
+                              </button>
+                            )}
+                            {pod.isPrimary && (
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                AI Suggested
+                              </span>
+                            )}
+                          </div>
 
               {!isPreFiling && (
                 <div>
@@ -592,6 +652,13 @@ export default function ProvisionalUpload({ onLogout }) {
                   </span>
                 )}
               </p>
+              <p className="text-sm mt-1">
+                <span className="font-medium">Primary POD:</span>{' '}
+                {primaryPodId 
+                  ? <span className="text-green-600">Selected</span>
+                  : <span className="text-red-600">Please select a primary POD</span>
+                }
+              </p>
             </div>
 
             <div className="flex gap-4">
@@ -605,9 +672,9 @@ export default function ProvisionalUpload({ onLogout }) {
               >
                 Start Over
               </button>
-              <button
+             <button
                 onClick={handleSave}
-                disabled={isProcessing || approvedPods.length < 3}
+                disabled={isProcessing || approvedPods.length < 3 || !primaryPodId}
                 className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 {isProcessing ? 'Saving...' : 'Save & Continue'}
