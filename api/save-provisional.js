@@ -50,10 +50,11 @@ export default async function handler(req, res) {
       cpcCount: cpcPredictions.length
     });
 
-    // Step 1: Update applications table with CPC data
+    // Step 1: Update applications table with CPC data and AI-generated title
     await sql`
       UPDATE applications 
       SET 
+        title = ${title},
         classifier_predictions = ${JSON.stringify(cpcPredictions)},
         predicted_primary_cpc = ${primaryCpc},
         technology_area = ${technologyArea},
